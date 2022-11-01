@@ -1,0 +1,177 @@
+---
+title: "StressMap"
+author: "Zachary Snider"
+date: "2022-10-19"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(ggfortify)
+library(tidyverse)
+library(raster)
+library(tmap)
+library(tmaptools)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggmap)
+library(raster)
+library(rgdal)
+library(terra)
+library(tigris)
+library(spatstat)
+"~/desktop/Boechera_GIS/"=library(prism)
+```
+
+```{r}
+setwd("~/Desktop/Boechera_GIS")
+stress <- read.csv("jrpam_all.csv")
+climate <- read.csv("boechera_climate_data.csv")
+recovery <- read.csv("jrpam_5day.csv")
+climate$PopID <- as.factor(climate$PopID)
+climate$Individual <- as.factor(climate$Individual)
+stress$PopID <- as.factor(stress$PopID)
+stress$Individual <- as.factor(stress$Individual)
+recovery$PopID <- as.factor(recovery$PopID)
+recovery$Individual <- as.factor(recovery$Individual)
+stress.clim <- left_join(stress, climate, by=c("Individual","Region","PopID"))
+colnames(stress.clim) <- c('Individual','PopID','Region','Heat.Temp','Cotyledon.vs.TL','rel.ms','Date.Stress','Time.Stress','Fo.prime','No.','F','Fm.','Temp','YII','Fo','Fm','Fv.Fm','Species','Latitude','Longitude','Elevation','Date.Found','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') #Renaming columns for legibility
+recovery.clim <- left_join(recovery, climate, by=c("Individual","Region","PopID"))
+colnames(recovery.clim) <- c('Individual','PopID','Region','Heat.Temp','Cotyledon.vs.TL','rel.ms','Date.Stress','Time.Stress','Fo.prime','No.','F','Fm.','Temp','YII','Fo','Fm','Fv.Fm','Species','Latitude','Longitude','Elevation','Date.Found','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') 
+```
+
+```{r}
+#get_prism_normals(type="tmean", resolution = "4km", annual = TRUE, keepZip= TRUE)
+get_prism_normals("ppt", "800m", annual=TRUE, keepZip= TRUE)
+get_prism_normals("tmean", "800m", annual=TRUE, keepZip= TRUE)
+get_prism_normals("tmin", "800m", annual=TRUE, keepZip= TRUE)
+get_prism_normals("tmax", "800m", annual=TRUE, keepZip= TRUE)
+get_prism_normals("tdmean", "800m", annual=TRUE, keepZip= TRUE)
+get_prism_normals("vpdmin", "800m", annual=TRUE, keepZip= TRUE)
+get_prism_normals("vpdmax", "800m", annual=TRUE, keepZip= TRUE)
+```
+
+```{r}
+prism_tmean <- rast("PRISM_tmean_30yr_normal_800mM3_annual_bil/PRISM_tmean_30yr_normal_800mM3_annual_bil.bil")
+CA_tmean <- 
+  tigris::counties(state="CA", cb=TRUE) %>%
+  st_as_sf %>%
+  st_transform(terra::crs(prism_tmean))
+plot(CA_tmean)
+```
+
+
+```{r}
+my_sf <- st_as_sf(stress.clim, coords = c('Longitude', 'Latitude'))
+st_crs(my_sf) = 4326
+my_sf
+ggplot(my_sf) + 
+  geom_sf(aes(color = PopID))
+#map(add=T)
+plot(my_sf$'YII')
+#map(add=TRUE)
+osm_soca <- read_osm(my_sf, ext=1.2)
+tm_shape(osm_soca) +
+  tm_rgb() +
+  tm_shape(my_sf['YII']) +
+  tm_dots(size=0.3) +
+  tm_layout(frame=TRUE)
+  
+```
+
+```{r}
+SOCA <- terra::crop(prism_tmean, my_sf)
+```
+
+```{r}
+bm <- get_map(location = c(lon=-117.5,lat=34.0),zoom=7, maptype = 'terrain-background', source = 'stamen')
+read_osm()
+```
+
+```{r}
+map1 <- ggplot(data=recovery.clim, aes(x=Latitude, y=Longitude, color=Region)) +
+  geom_point()
+map1
+```
+
+
+```{r}
+RMSE <- function(observed, predicted) {
+  sqrt(mean((predicted - observed)^2, na.rm=TRUE))
+}
+null <- RMSE(mean(my_sf$YII), my_sf$YII)
+null
+dta <- spTransform(my_sf, TA)
+
+```
+
+
+
+```{r}
+my_sp <- as(my_sf, "Spatial")
+my_ppp <- as.ppp(my_sp)
+th  <-  as(dirichlet(as.ppp(my_sp)), "SpatialPolygons")
+
+```
+
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+head(recovery.clim)
+xmin <- signif(min(recovery.clim$Longitude),4) - 0.2  # 756000
+xmax <- signif(max(recovery.clim$Longitude),4) + 0.2  # 789000
+ymin <- signif(min(recovery.clim$Latitude),5) - 0.2  # 2619900
+ymax <- signif(max(recovery.clim$Latitude),5) + 0.2  # 2655900
+gridint <- 5000
+
+library(akima)
+fld<- with(recovery.clim, interp(x = Longitude, y = Latitude, z = YII, linear = FALSE, extrap = TRUE, duplicate = TRUE,
+                      xo=seq(xmin, xmax, length=gridint), 
+                      yo=seq(ymin, ymax, length=gridint)))  # give AOI and number of 'grid'
+# check whether the conditions are met.
+length(fld$x); length(fld$y); length(fld$z); range(fld$x); range(fld$y)
+  # 500, 500, 250000 (=500^2), 756000 789000, 2619900 2655900,   # all OK
+
+contour(fld)   # Left graph (most basic graphic output)
+
+fld2 <- as.data.frame(interp2xyz(fld))  # the xy.est parameter (data.frame)
+ggplot(fld2, aes(x=x, y=y, z=z)) + geom_contour() 
+
+```
+
+
+
+```{r}
+x.range <- range(recovery.clim$Longitude)
+y.range <- range(recovery.clim$Latitude)
+coordinates(recovery.clim) = ~Longitude+Latitude
+plot(recovery.clim)
+locator(4)
+x.range <- range(xmin, xmax)
+y.range <- range(ymin, ymax)
+grd <- expand.grid(x=seq(from=xmin, to=xmax, by=0.05), y=seq(from=ymin, to=ymax, by=0.05))
+coordinates(grd) <- ~ x+y
+gridded(grd) <- TRUE
+plot(grd)
+points(recovery.clim, col="red")
+idw<-idw(recovery.clim, at=YII, newdata=grd)
+```
+
+
+
+
+
+
+
+
+

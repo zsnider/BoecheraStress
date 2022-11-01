@@ -1,0 +1,441 @@
+---
+title: "Stress"
+author: "Zachary Snider"
+date: "2022-10-18"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+Loading in the required packages
+```{r setup, include=FALSE}
+# install.packages('MVA')
+# install.packages('vegan')
+# install.packages(c('FactoMineR','factoextra'))
+# install.packages('ggfortify')
+library(vegan)
+library(FactoMineR)
+library(ggplot2)
+library(ggfortify)
+library(tidyverse)
+library(factoextra)
+library(gridExtra)
+library(car)
+library(leaps)
+library(picante)
+```
+Loading in the data. 
+```{r}
+setwd("~/Desktop/StressExperiments")
+stress <- read.csv("jrpam_all.csv")
+recovery <- read.csv("jrpam_5day.csv")
+pheno <- read.csv("PhenotypeScores.csv")
+ion <- read.csv("IonLeakage.csv")
+climate <- read.csv("boechera_climate_data.csv")
+climate$PopID <- as.factor(climate$PopID)
+climate$Individual <- as.factor(climate$Individual)
+stress$PopID <- as.factor(stress$PopID)
+stress$Individual <- as.factor(stress$Individual)
+recovery$PopID <- as.factor(recovery$PopID)
+recovery$Individual <- as.factor(recovery$Individual)
+stress.clim <- left_join(stress, climate, by=c("Individual","Region","PopID"))
+colnames(stress.clim) <- c('Individual','PopID','Region','Heat.Temp','Cotyledon.vs.TL','rel.ms','Date.Stress','Time.Stress','Fo.prime','No.','F','Fm.','Temp','YII','Fo','Fm','Fv.Fm','Species','Latitude','Longitude','Elevation','Date.Found','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') #Renaming columns for legibility
+recovery.clim <- left_join(recovery, climate, by=c("Individual","Region","PopID","Species"))
+colnames(recovery.clim) <- c('Individual','PopID','Region','Species','Heat.Temp','Cotyledon.vs.TL','rel.ms','Date.Stress','Time.Stress','Fo.prime','No.','F','Fm.','Temp','YII','Fo','Fm','Fv.Fm','Latitude','Longitude','Elevation','Date.Found','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') 
+```
+
+Stress and Climate data for Southern California Boechera populations collected by Zach Snider. Variables include: Invididual, subpopulation (PopID), regional population (Region), Temperature of heat stress experiment (Heat.Temp), Cotyledon or True Leaf measurements (Cotyledon.vs.TL), Relative time, Date of heat stress, time of heat stress, type of stress measurement, count of measurement for that session, 1:F, 1:Fm, 1:Temp, YII,, 1:Fo,, 1:Fm, 1:Fv/Fm , Latitude, Longitude, Elevation, Date.Found, mean temperature, average max temp, average min temp, average precipitation, average max vapor pressure deficit, average min vapor pressure deficit, aspect, average solar transmittance on a clear day, and average solar transmittance on a cloudy day. 
+
+Elevation along with the 9 climate variables are potential explanatory variables, and could be appropriate for a multiple regression approach to predicting YII (quantum yield), but 10
+predictors is a lot. So it may be preferable to reduce the number of explanatory
+variables using PCA to come up with a few important explanatory components.
+
+```{r}
+head(stress.clim)
+```
+
+
+```{r scatterplotmatrix,dpi=300,fig.cap='Scatterplot matrix for the explanatory variables.'}
+panel.hist <- function(x, ...) {
+	usr <- par("usr"); on.exit(par(usr))
+	par(usr = c(usr[1:2], 0, 1.5) )
+	h <- hist(x, plot = FALSE)
+	breaks <- h$breaks; nB <- length(breaks)
+	y <- h$counts; y <- y/max(y)
+	rect(breaks[-nB], 0, breaks[-1], y, col="grey", ...) 
+}
+
+pairs(stress.clim[,c(21,23:29,31:32)], diag.panel = panel.hist,
+		pch = 20, cex = 1.3, cex.axis = 1.3, lower.panel = NULL)
+```
+
+We should prefer the function `prcomp` over `princomp` due to the
+underlying methods (single value decomposition of centered & scaled data
+instead of calculating eigenvalues of covariance matrix). 
+
+```{r prcomp1}
+options(digits = 2)  # make the output more compact
+# Run the PCA on the data set, only including the explanatory variables
+# The options center and scale the data to make sure that the input data are standardized
+stress.clim_pca <- prcomp(stress.clim[,c(21,23:29,31:32)], center=TRUE, scale.=TRUE)
+summary(stress.clim_pca)
+```
+
+```{r screeAirPlot,dpi = 300, fig.cap='Scree plot of the US air pollution data'}
+# Scree plot
+screeplot(stress.clim_pca)
+```
+
+```{r showLoadings}
+# Show the loadings of each variable for each principal component
+stress.clim_pca
+```
+
+```{r airBiPlotNoLabels, dpi = 300, fig.width=6}
+# Generate a plot of the first two principal components, with the cities
+# color coded by region of the country
+autoplot(stress.clim_pca, data = stress.clim, colour = 'Region',
+				loadings=TRUE, size = 3,
+				loadings.label = TRUE, loadings.label.size=5) + 
+		theme(axis.text=element_text(size=18),
+				axis.title=element_text(size=18,face="bold")) 
+```
+
+```{r airBiPlotWithSubpopulationLabels,dpi=300,fig.width=6}
+# Plot with the subpopulation names included
+autoplot(stress.clim_pca, data = stress.clim, colour = 'Region',
+				loadings=TRUE, size = 3, loadings.label = TRUE, 
+				loadings.label.size=5, label=TRUE,
+				label.label = 'PopID', label.vjust = -0.5) + 
+		theme(axis.text=element_text(size=18),
+				axis.title=element_text(size=18,face="bold"))
+```
+
+Use the `factoextra` package functions to make a ggplot representation of the
+individual subpops in the PC1 & PC2 space, with 95% confidence ellipses.
+
+```{r airBiPlotFactoExtra, dpi = 300, fig.width=6}
+fviz_pca_ind(stress.clim_pca, col.ind=stress.clim$Region, addEllipses=TRUE,
+		mean.point=TRUE, ellipse.type='confidence' )
+```
+
+Extract the numeric representations of each of the variables in the PC space. This uses functions from the `factoextra` package.
+
+First show the coordinates of each variable in each PC dimension. These
+correspond to their locations on a correlation of the variables (not the
+biplot we saw above, different scales).
+
+```{r}
+var = get_pca_var(stress.clim_pca)
+var$coord
+```
+
+```{r varPlot,dpi=300,fig.cap='Correlation plot, showing variable correlations and contributions for the city air data.'}
+fviz_pca_var(stress.clim_pca)
+```
+
+Next show their relative 'quality' values in the PC space. Larger values are
+better, and correspond to longer arrows on the bi-plot in the dimension of 
+interest. For my dataset, 'Elevation', 'tmean', 'tmax', 'tmin', 'PPT', 'tdmean', and 'vpdmax' all have high values for dimension 1 (PC1), while 'vpdmin' and 'tmin' have high values in dimension 2 (PC2). Note how these scores correspond to the direction and length of the variable arrows on the biplot. 
+
+```{r}
+var$cos2
+```
+
+Finally you can show the contribution, as a percentage value, of each variable
+to the principal components (dimensions). Again we see the first 7 variables have high contributions of PC1 and 'vpdmin' and 'tmin' have high contributions of PC2
+
+```{r}
+var$contrib
+```
+
+Use the principal component scores for each subpop in a linear model, with 
+YII (quantum yield) concentration as the response variable. 
+```{r}
+stress.clim_pca = prcomp(stress.clim[,c(21,23:29,31:32)], center=TRUE, scale.=TRUE)
+summary(stress.clim_pca)
+# Generate a set of principal component scores for each subpop
+scores = stress.clim_pca$x
+# Fit the model using the PC scores
+mod = lm(YII~scores, data = stress.clim)
+summary(mod)
+```
+
+
+
+
+Recovery PCA and model
+
+We should prefer the function `prcomp` over `princomp` due to the
+underlying methods (single value decomposition of centered & scaled data
+instead of calculating eigenvalues of covariance matrix). 
+```{r}
+head(recovery.clim)
+recovery.clim_pca <- prcomp(recovery.clim[,c(21,23:29,31:32)], center=TRUE, scale.=TRUE)
+summary(recovery.clim_pca)
+```
+
+```{r screeAirPlot,dpi = 300, fig.cap='Scree plot of the US air pollution data'}
+# Scree plot
+screeplot(recovery.clim_pca)
+```
+
+```{r showLoadings}
+# Show the loadings of each variable for each principal component
+recovery.clim_pca
+```
+
+```{r airBiPlotWithSubpopulationLabels,dpi=300,fig.width=6}
+# Plot with the subpopulation names included
+autoplot(recovery.clim_pca, data = recovery.clim, colour = 'Region',
+				loadings=TRUE, size = 3, loadings.label = TRUE, 
+				loadings.label.size=5, label=TRUE,
+				label.label = 'PopID', label.vjust = -0.5) + 
+		theme(axis.text=element_text(size=18),
+				axis.title=element_text(size=18,face="bold"))
+```
+
+```{r}
+varR = get_pca_var(recovery.clim_pca)
+varR$coord
+varR$cos2
+varR$contrib
+```
+
+Extract the numeric representations of each of the variables in the PC space. This uses functions from the `factoextra` package.
+
+First show the coordinates of each variable in each PC dimension. These
+correspond to their locations on a correlation of the variables (not the
+biplot we saw above, different scales). 
+Next show their relative 'quality' values in the PC space. Larger values are
+better, and correspond to longer arrows on the bi-plot in the dimension of 
+interest.
+
+```{r varPlot,dpi=300,fig.cap='Correlation plot'}
+fviz_pca_var(recovery.clim_pca)
+fviz_contrib(recovery.clim_pca, choice='var', axes=1:2)
+#Which factors contribute the most to pcs 1 and 2
+```
+
+```{r}
+recovery.clim_pca = prcomp(recovery.clim[,c(21,23:25,27:29)], center=TRUE, scale.=TRUE)
+# Generate a set of principal component scores for each subpop
+scores = recovery.clim_pca$x
+# Fit the model using the PC scores
+mod = lm(YII~scores, data = recovery.clim)
+summary(mod)
+```
+
+```{r}
+p1 <- ggplot(data=recovery.clim, aes(x=tmean, y=YII)) +
+  geom_point() + theme_bw() + xlab("Mean Annual Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p2 <- ggplot(data=recovery.clim, aes(x=tmax, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Max Annual Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p3 <- ggplot(data=recovery.clim, aes(x=tmin, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Min Annual Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p4 <- ggplot(data=recovery.clim, aes(x=Elevation, y=YII)) +
+  geom_point() + theme_bw() +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+grid.arrange(p1, p2, p3, p4, ncol=2)
+p5 <- ggplot(data=recovery.clim, aes(x=PPT, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Precipitation") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p6 <- ggplot(data=recovery.clim, aes(x=tdmean, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Dew Point Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p7 <- ggplot(data=recovery.clim, aes(x=vpdmax, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Max Annual Vapor Pressure Deficit") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p8 <- ggplot(data=recovery.clim, aes(x=vpdmin, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Min Annual Vapor Pressure Deficit") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p9 <- ggplot(data=recovery.clim, aes(x=solclear, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Solar Radiation") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p10 <- ggplot(data=recovery.clim, aes(x=soltrans, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Cloud Transmittance") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+grid.arrange(p5, p6, p7, p8, p9, p10, ncol=3)
+
+```
+
+
+Type I SOS assigns variation to different variables in a sequential order.
+Type I takes into account interactions. 
+Type II does not take into account interactions. 
+In Type II SOS, variation assigned to IV "A" is accounting for IV "B" and vice versa.
+Type III , or partial SOS, is not sequential and takes into account interactions. 
+Use glm (generalized linear model) because these response variables do not necesarily follow a normal distribution. A lm (general linear model) requires that the response variables follow a normal distribution
+```{r}
+rmod <- lm(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin, data=recovery.clim)
+summary(rmod)
+rmod2 <- lm(YII ~ tmean * Elevation * tmax * tdmean * vpdmax * tmin * PPT * vpdmin, data=recovery.clim)
+anova(rmod2)
+rmod3 <- lm(YII ~ tmean + Elevation + tdmean + vpdmax + vpdmin + PPT + tmean:Elevation  + tmean:tmax + Elevation:tdmean + tmax:tdmean + Elevation:vpdmax + tmax:vpdmax + tdmean:vpdmax + tmean:tmax:vpdmax:tmin:PPT, data=recovery.clim)
+anova(rmod3)
+anova(rmod3,rmod2) #significant difference between models. Remove those IVs
+rmod4 <- lm(YII ~ tmean + Elevation + tdmean + vpdmax + vpdmin + PPT + tmean:Elevation  + tmean:tmax + tmax:tdmean + Elevation:vpdmax + tmax:vpdmax + tdmean:vpdmax + tmean:tmax:vpdmax:tmin:PPT, data=recovery.clim)
+anova(rmod4)
+anova(rmod4,rmod3)
+rmod5 <- lm(YII ~ tmean + Elevation + tdmean + vpdmax + vpdmin + PPT + tmean:Elevation  + tmean:tmax + tmax:vpdmax + tmean:tmax:vpdmax:tmin:PPT, data=recovery.clim)
+anova(rmod5)
+anova(rmod5,rmod4)
+rmod6 <- lm(YII ~ tmean + Elevation + tdmean + vpdmax + vpdmin + PPT + tmean:Elevation  + tmean:tmax + tmean:tmax:vpdmax:tmin:PPT, data=recovery.clim)
+anova(rmod6)
+anova(rmod6,rmod5)
+rmod7 <- lm(YII ~ tmean + Elevation + tdmean + vpdmax + vpdmin + PPT + tmean:Elevation  + tmean:tmax, data=recovery.clim)
+anova(rmod7)
+anova(rmod7,rmod6) #No significant difference between these models so keep tmean:tmax:vpdmax:tmin:PPT in the model
+summary(rmod6)
+#r^2 ranges from 0 to 1. r squared of 0.3 would be that there is 30% less variation
+#around the linear model, than the mean. In other words...
+#options(contrasts = c("contr.sum", "contr.poly"))
+#Anova(rmod6, type=2) #I would not use type 2 because there is interactions
+#options(contrasts = c("contr.treatment", "contr.poly"))
+Anova(rmod6, type=3)
+
+```
+
+```{r}
+plot(rmod6)
+qqnorm(resid(rmod6)); qqline(resid(rmod6))
+hist(resid(rmod6))
+```
+
+```{r}
+rmod.fit <- regsubsets(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=recovery.clim)
+sum.rmod <- summary(rmod.fit)
+sum.rmod
+plot(sum.rmod$adj.r.squared)
+Adj.R2 = which.max(sum.rmod$adjr2)
+Adj.R2
+which.max(sum.rmod$adjr2)
+```
+
+```{r}
+rmod9 <- lm(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + vpdmin + solclear + soltrans, data=recovery.clim)
+summary(rmod9)
+options(contrasts = c("contr.sum", "contr.poly"))
+Anova(rmod9, type=2) #I would not use type 2 because there is interactions
+options(contrasts = c("contr.treatment", "contr.poly"))
+```
+
+```{r}
+rmod10 <- lm(YII ~ tmean, data=recovery.clim)
+summary(rmod10)
+rmod11 <- lm(YII ~ Elevation, data=recovery.clim)
+summary(rmod11)
+rmod12 <- lm(YII ~ tmax, data=recovery.clim)
+summary(rmod12)
+rmod13 <- lm(YII ~ tmin, data=recovery.clim)
+summary(rmod13)
+rmod14 <- lm(YII ~ tdmean, data=recovery.clim)
+summary(rmod14)
+rmod15 <- lm(YII ~ vpdmax, data=recovery.clim)
+summary(rmod15)
+rmod16 <- lm(YII ~ vpdmin, data=recovery.clim)
+summary(rmod16)
+rmod17 <- lm(YII ~ PPT, data=recovery.clim)
+summary(rmod17)
+rmod18 <- lm(YII ~ solclear, data=recovery.clim)
+summary(rmod18)
+rmod19 <- lm(YII ~ soltrans, data=recovery.clim)
+summary(rmod19)
+
+cor.table(recovery.clim[,c(21,23:25,27:29)],cor.method="pearson")
+```
+
+
+
+
+
+
+Checking for normality
+```{r}
+qqnorm(recovery.clim$Elevation);qqline(recovery.clim$Elevation)
+shapiro.test(recovery.clim$Elevation)
+qqnorm(recovery.clim$tmean);qqline(recovery.clim$tmean)
+shapiro.test(recovery.clim$tmean)
+qqnorm(recovery.clim$tmax);qqline(recovery.clim$tmax)
+shapiro.test(recovery.clim$tmax)
+qqnorm(recovery.clim$tmin);qqline(recovery.clim$tmin)
+shapiro.test(recovery.clim$tmin)
+qqnorm(recovery.clim$tdmean);qqline(recovery.clim$tdmean)
+shapiro.test(recovery.clim$tdmean)
+qqnorm(recovery.clim$vpdmax);qqline(recovery.clim$vpdmax)
+shapiro.test(recovery.clim$vpdmax)
+qqnorm(recovery.clim$vpdmin);qqline(recovery.clim$vpdmin)
+shapiro.test(recovery.clim$vpdmin)
+qqnorm(recovery.clim$PPT);qqline(recovery.clim$PPT)
+shapiro.test(recovery.clim$PPT)
+qqnorm(recovery.clim$YII);qqline(recovery.clim$YII)
+shapiro.test(recovery.clim$YII)
+hist(recovery$YII)
+```
+
+
+
+
+
+
+
+
+Best subsets regression
+R does not drop things that are autocorrelated
+step backwards regression
+multiple regression - don't worry about normalization
+
+do a simple linear regression model one by one as a follow up to the multiple regression.
+Base my best model on adjusted r squared, not aic or bic
+
+if i just want to know simply predictability, i can include all the variables
+
+
+
+
+
+
+
+## Including Plot and creating predictive models
+
+Is there a correlation between solar transmittance and YII?
+```{r}
+ggplot(data=stress.clim, aes(x=solclear, y=YII)) +
+  geom_point() +
+  theme_bw() +
+  xlab("Average Solar Radiation with a Clear Sky") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+```
+
+```{r}
+cor(stress.clim$solclear,stress.clim$YII)
+solmod <- lm(YII ~ solclear, data=stress.clim)
+summary(solmod)
+```
+
+Testing making predictions with solar radiance model
+```{r}
+solclear <- c(24.2, 23.8, 24.92)
+id <- c("test1","test2","test3")
+p <- data.frame(id,solclear)
+predict(solmod, newdata=p)
+```
+Testing model with user input
+```{r}
+sample = readline("Enter your Sample ID: ")
+sample = as.character(sample)
+solclear = readline("Enter your Clear Day Solar Transmittance: ")
+solclear = as.integer(solclear)
+p1 <- data.frame(sample,solclear)
+predict(solmod, newdata=p1)
+```
+
+```{r}
+saveRDS(solmod,"solmod.rds")
+```
+
+
+
+

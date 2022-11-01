@@ -1,0 +1,49 @@
+---
+title: "Stress.Ion"
+author: "Zachary Snider"
+date: "2022-10-26"
+output: html_document
+---
+
+Loading in the required packages
+```{r setup, include=FALSE}
+library(vegan)
+library(FactoMineR)
+library(ggplot2)
+library(ggfortify)
+library(tidyverse)
+library(factoextra)
+library(gridExtra)
+library(car)
+library(leaps)
+library(picante)
+library(hrbrthemes)
+library(plotly)
+library(tibble)
+library(forcats)
+library(scales)
+library(nlme)
+library(lme4)
+```
+
+Loading in the data. 
+```{r}
+setwd("~/Desktop/StressExperiments")
+ion <- read.csv("IonLeakage.csv")
+ion$Percent.Leaked <- as.numeric(ion$Percent.Leaked)
+ion$Individual <- as.factor(ion$Individual)
+ion$PopID <- as.factor(ion$PopID)
+ion.ca <- ion %>%
+  filter(Species == "californica")
+```
+
+### ION LEAKAGE ###
+```{r}
+ioncaplot <- ggplot(ion.ca, aes(x=PopID, y=Percent.Leaked, fill = Region)) +
+  geom_boxplot() +
+  theme_bw() +
+  xlab("Subpopulation") +
+  ylab("Percent of Ions Leaked After 4 Hours")
+ioncaplot
+
+```
