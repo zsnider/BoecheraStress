@@ -38,7 +38,8 @@ library(lme4)
 
 Loading in the data. 
 ```{r}
-setwd("~/Desktop/StressExperiments")
+#setwd("~/Desktop/StressExperiments")
+#setwd("C:/Users/Daniel/Desktop/BoecheraStress-main")
 stress <- read.csv("jrpam_all.csv")
 recovery <- read.csv("jrpam_5day.csv")
 climate <- read.csv("boechera_climate_data.csv")
