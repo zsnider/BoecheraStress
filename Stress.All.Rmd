@@ -44,11 +44,8 @@ stress <- read.csv("jrpam_all.csv")
 recovery <- read.csv("jrpam_5day.csv")
 climate <- read.csv("boechera_climate_data.csv")
 climate$PopID <- as.factor(climate$PopID)
-climate$Individual <- as.factor(climate$Individual)
 stress$PopID <- as.factor(stress$PopID)
-stress$Individual <- as.factor(stress$Individual)
 recovery$PopID <- as.factor(recovery$PopID)
-recovery$Individual <- as.factor(recovery$Individual)
 colnames(stress) <- c('Individual','PopID','Region','Species',
                       'Heat.Temp','Cotyledon.vs.TL',
                            'rel.ms','Date.Stress','Time.Stress','Fo.prime','No.',
@@ -63,12 +60,8 @@ colnames(recovery.clim) <- c('Individual','PopID','Region','Species','Heat.Temp'
 
 ```
 
-Subsetting Data for only CALIFORNICA
+Subsetting Data for only B. californica
 ```{r}
-stress.ca <- stress %>%
-  filter(Species == "californica")
-recovery.ca <- recovery %>%
-  filter(Species == "californica")
 stress.clim.ca <- stress.clim %>%
   filter(Species == "californica")
 recovery.clim.ca <- recovery.clim %>%
@@ -76,29 +69,59 @@ recovery.clim.ca <- recovery.clim %>%
 
 ```
 
-### 5 DAY RECOVERY CHLOROPHYLL FLUORESCENCE DATA ###
-
-Nested ANOVA to test the variance of YII. 
+Creating a variance and a mean YII column for the recovery group
 ```{r}
-#First create a new column with the variances of each individual
-recovery.ca.2 <- aggregate(YII ~ Individual, 
-                    data=recovery, 
+recovery.clim.ca.var <- aggregate(YII ~ Individual, 
+                    data=recovery.clim.ca, 
                     function(x) { 
                       c(avg=var(x)) 
                     })
-colnames(recovery.ca.2) <- c('Individual','YII.var')
-recovery.ca.3 <- left_join(recovery.ca.2, recovery.ca, by=c("Individual"))
-recovery.ca.3 <- recovery.ca.3[!duplicated(recovery.ca.3$Individual), ]
-recovery.clim.ca.2 <- left_join(recovery.ca.3, climate, by=c("Individual","Region","PopID","Species"))
+colnames(recovery.clim.ca.var) <- c('Individual','YII.var')
+recovery.clim.ca.2 <- left_join(recovery.clim.ca.var, recovery.clim.ca, by=c("Individual"))
+recovery.clim.ca.3 <- recovery.clim.ca.2[!duplicated(recovery.clim.ca.2$Individual), ]
 head(recovery.clim.ca.2)
 recovery.clim.ca.2 <- recovery.clim.ca.2[,-c(8,9,10,11,12,23)]
-colnames(recovery.clim.ca.2) <- c('Individual','YII.var','PopID','Region','Species','Heat.Temp','Cotyledon.vs.TL','F','Fm.','Temp','YII','Fo','Fm','Fv.Fm','Latitude','Longitude','Elevation','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') 
-recovery.clim.ca.2 <- recovery.clim.ca.2 %>%
-  filter(Species == "californica")
-recovery.ca.3 <- recovery.ca.3 %>%
-  filter(Species == "californica")
+recovery.clim.ca.mean <- aggregate(YII ~ Individual, 
+                    data=recovery.clim.ca, 
+                    function(x) { 
+                      c(avg=mean(x)) 
+                    })
+colnames(recovery.clim.ca.mean) <- c('Individual','YII.mean')
+recovery.clim.ca.2 <- left_join(recovery.clim.ca.mean, recovery.clim.ca.2, by=c("Individual"))
+recovery.clim.ca.3 <- recovery.clim.ca.2[!duplicated(recovery.clim.ca.2$Individual), ]
+head(recovery.clim.ca.2)
+recovery.clim.ca.3 <- recovery.clim.ca.3[,-c(8,9,10,11,12,23)]
 ```
 
+Creating a variance and mean YII column for initial stress group
+```{r}
+stress.clim.ca.var <- aggregate(YII ~ Individual, 
+                    data=stress.clim.ca, 
+                    function(x) { 
+                      c(avg=var(x)) 
+                    })
+colnames(stress.clim.ca.var) <- c('Individual','YII.var')
+stress.clim.ca.2 <- left_join(stress.clim.ca.var, stress.clim.ca, by=c("Individual"))
+stress.clim.ca.3 <- stress.clim.ca.2[!duplicated(stress.clim.ca.2$Individual), ]
+head(stress.clim.ca.2)
+stress.clim.ca.2 <- stress.clim.ca.2[,-c(8,9,10,11,12,23)]
+stress.clim.ca.mean <- aggregate(YII ~ Individual, 
+                    data=stress.clim.ca, 
+                    function(x) { 
+                      c(avg=mean(x)) 
+                    })
+colnames(stress.clim.ca.mean) <- c('Individual','YII.mean')
+stress.clim.ca.2 <- left_join(stress.clim.ca.mean, stress.clim.ca.2, by=c("Individual"))
+stress.clim.ca.3 <- stress.clim.ca.2[!duplicated(stress.clim.ca.2$Individual), ]
+head(stress.clim.ca.2)
+stress.clim.ca.3 <- stress.clim.ca.3[,-c(8,9,10,11,12,23)]
+```
+
+
+
+### 5 DAY RECOVERY CHLOROPHYLL FLUORESCENCE DATA ###
+
+Nested ANOVA to test the variance of YII. 
 First testing for interactions
 ```{r}
 m0 <- lm(YII.var ~ Region, data=recovery.clim.ca.2)
@@ -114,17 +137,17 @@ The model is YII ~ Region + Pop(Region) + Individual(Pop(Region))
 Individual is a random effect. 
 ```{r}
 #Make the nested anova
-nest_r <- aov(recovery.ca.3$YII.var ~ recovery.ca.3$Region / factor(recovery.ca.3$PopID) / factor(recovery.ca.3$Individual))
+nest_r <- aov(recovery.clim.ca.2$YII.var ~ recovery.clim.ca.2$Region / factor(recovery.clim.ca.2$PopID) / factor(recovery.clim.ca.2$Individual))
 summary(nest_r)
 nest_r
-#TukeyHSD(nest)
+TukeyHSD(nest_r)$'recovery.clim.ca.2$Region'
 
-nest2_r <- aov(recovery.ca.3$YII.var ~ recovery.ca.3$Region + recovery.ca.3$Region / factor(recovery.ca.3$PopID) + (recovery.ca.3$Region / factor(recovery.ca.3$PopID) / factor(recovery.ca.3$Individual)))
-summary(nest2_r)
-
-nest3_r <-  aov(recovery.ca.3$YII.var ~ recovery.ca.3$Region * factor(recovery.ca.3$PopID) * factor(recovery.ca.3$Individual))
-summary(nest3_r)
-anova(nest3_r)
+#Other ways to write the same ANOVA
+#nest2_r <- aov(recovery.clim.ca.2$YII.var ~ recovery.clim.ca.2$Region + recovery.clim.ca.2$Region / factor(recovery.clim.ca.2$PopID) + (recovery.clim.ca.2$Region / factor(recovery.clim.ca.2$PopID) / factor(recovery.clim.ca.2$Individual)))
+#summary(nest2_r)
+#nest3_r <-  aov(recovery.clim.ca.2$YII.var ~ recovery.clim.ca.2$Region * factor(recovery.clim.ca.2$PopID) * factor(recovery.clim.ca.2$Individual))
+#summary(nest3_r)
+#anova(nest3_r)
 ```
 
 Linear Mixed Effects Model
