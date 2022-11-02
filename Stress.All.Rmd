@@ -34,7 +34,9 @@ library(forcats)
 library(scales)
 library(nlme)
 library(lme4)
+library(cluster)
 ```
+
 
 Loading in the data. 
 ```{r}
@@ -57,7 +59,6 @@ stress.clim <- left_join(stress, climate, by=c("Individual","Region","PopID","Sp
 colnames(stress.clim) <- c('Individual','PopID','Region','Species','Heat.Temp','Cotyledon.vs.TL','rel.ms','Date.Stress','Time.Stress','Fo.prime','No.','F','Fm.','Temp','YII','Fo','Fm','Fv.Fm','Latitude','Longitude','Elevation','Date.Found','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') #Renaming columns for legibility
 recovery.clim <- left_join(recovery, climate, by=c("Individual","Region","PopID","Species"))
 colnames(recovery.clim) <- c('Individual','PopID','Region','Species','Heat.Temp','Cotyledon.vs.TL','rel.ms','Date.Stress','Time.Stress','Fo.prime','No.','F','Fm.','Temp','YII','Fo','Fm','Fv.Fm','Latitude','Longitude','Elevation','Date.Found','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') 
-
 ```
 
 Subsetting Data for only B. californica
@@ -66,7 +67,6 @@ stress.clim.ca <- stress.clim %>%
   filter(Species == "californica")
 recovery.clim.ca <- recovery.clim %>%
   filter(Species == "californica")
-
 ```
 
 Creating a variance and a mean YII column for the recovery group
@@ -129,7 +129,6 @@ m1 <- lm(YII.var ~ Region+PopID, data=recovery.clim.ca.2)
 anova(m1,m0) # test for difference in mean(PopID) after control for Rregion
 m2 <- lm(YII.var ~ Region*PopID, data=recovery.clim.ca.2) 
 anova(m2, m1) # test for interaction: different slopes in the two Conditions
-
 ```
 
 
@@ -141,7 +140,6 @@ nest_r <- aov(recovery.clim.ca.2$YII.var ~ recovery.clim.ca.2$Region / factor(re
 summary(nest_r)
 nest_r
 TukeyHSD(nest_r)$'recovery.clim.ca.2$Region'
-
 #Other ways to write the same ANOVA
 #nest2_r <- aov(recovery.clim.ca.2$YII.var ~ recovery.clim.ca.2$Region + recovery.clim.ca.2$Region / factor(recovery.clim.ca.2$PopID) + (recovery.clim.ca.2$Region / factor(recovery.clim.ca.2$PopID) / factor(recovery.clim.ca.2$Individual)))
 #summary(nest2_r)
@@ -152,7 +150,7 @@ TukeyHSD(nest_r)$'recovery.clim.ca.2$Region'
 
 Linear Mixed Effects Model
 ```{r}
-mixed.lmer_r <- lmer(YII.var ~ Region + (1|PopID:Region), data = recovery.clim.ca.2)
+mixed.lmer_r <- lmer(YII.mean ~ Region + (1|PopID:Region), data = recovery.clim.ca.3)
 #mixed.lmer_r2 <- lmer(YII.var ~ Region + (1|PopID) + (Region|Individual), data = recovery.clim.ca.2)
 #mixed.lme_r <- lme(YII.var ~ Region, random = (1|PopID), data=recovery.ca.3)
 #anova(mixed.lmer_r, mixed.lmer_r2)
@@ -160,13 +158,11 @@ summary(mixed.lmer_r)
 #summary(mixed.lmer_r2)
 plot(mixed.lmer_r)
 qqnorm(resid(mixed.lmer_r)); qqline(resid(mixed.lmer_r))
+#For YII.mean
+0.0129/(0.0129+0.015) #=0.46
+#For YII.var
 0.000294 / (0.000204+0.000181) #=0.76
 #PopID explains 76% of the variance left over
-#Variance for Individual is 0.0216. Divide this by total variance. 
-0.014 / (0.014 + 0.0131 + 0.0377) # =0.22
-#Individual explains 22% of the variance left over after the variance explained by our fixed effects.
-0.0131 / (0.014 + 0.0131 + 0.0377) # =0.2
-#Pop ID explains 20% of the variance.
 
 library(effects)
 plot(allEffects(mixed.lmer_r))
@@ -188,17 +184,17 @@ plot(sum.rmod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
 adj_r2_max = which.max(sum.rmod$adjr2) #9
 points(adj_r2_max, sum.rmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 # Forward Stepwise Selection
-regfit_fwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = recovery.clim.ca, nvmax = 10, method = "forward")
-summary(regfit_fwd)
+#regfit_fwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = recovery.clim.ca, nvmax = 10, method = "forward")
+#summary(regfit_fwd)
 # Backward Stepwise Selection
-regfit_bwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = recovery.clim.ca, nvmax = 10, method = "backward")
-summary(regfit_bwd)
+#regfit_bwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = recovery.clim.ca, nvmax = 10, method = "backward")
+#summary(regfit_bwd)
 ```
 
 Creating the multiple regression model
 ```{r}
 rmod <- lm(YII ~ tmean + Elevation + tmax  + tdmean + tmin + PPT + vpdmin + solclear + soltrans, data=recovery.clim.ca)
-summary(rmod) #adjusted r squared = 0.341
+summary(rmod) #adjusted r squared = 0.342
 Anova(rmod, type=2)
 par(mfrow=c(2,2))
 plot(rmod)
@@ -207,16 +203,16 @@ par(mfrow=c(1,1))
 
 Checking correlation of variables. 
 ```{r}
-cor.table(recovery.clim.ca[,c(21,23:27,29,31,32)])
+cor.table(recovery.clim.ca.2[,c(18:25,27,28)])
 rmod <- lm(YII ~ tmean)
-cor_data <- cor((recovery.clim.ca[,c(21,23:27,29,31,32)]))
+cor_data <- cor((recovery.clim.ca.2[,c(18:25,27,28)]))
 cor_data
 cor_matrix_rm <- cor_data                # Modify correlation matrix
 cor_matrix_rm[upper.tri(cor_matrix_rm)] <- 0
 diag(cor_matrix_rm) <- 0
 cor_matrix_rm
 #To remove highly correlated variables
-recovery.clim.ca.4 <- recovery.clim.ca[ , !apply(cor_matrix_rm,2,function(x) any(x > 0.99))]
+recovery.clim.ca.4 <- recovery.clim.ca.2[ , !apply(cor_matrix_rm,2,function(x) any(x > 0.99))]
 ```
 
 Plotting YII against climatic variables
@@ -261,90 +257,82 @@ Nested ANOVA to test the variance of YII.
 The model is YII ~ Region + Pop(Region) + Individual(Pop(Region))
 Individual is a random effect. 
 ```{r}
-#First create a new column with the variances of each individual
-stress.ca.2 <- aggregate(YII ~ Individual, 
-                    data=stress, 
-                    function(x) { 
-                      c(avg=var(x)) 
-                    })
-colnames(stress.ca.2) <- c('Individual','YII.var')
-stress.ca.3 <- left_join(stress.ca.2, stress, by=c("Individual"))
-stresss.ca.3 <- stress.ca.3[!duplicated(stress.ca.3$Individual), ]
-head(stress.ca.3)
 #Make the nested anova
-nest_s <- aov(stress.ca.3$YII.var ~ stress.ca.3$Region / factor(stress.ca.3$PopID) / factor(stress.ca.3$Individual))
+nest_s <- aov(stress.clim.ca.2$YII.var ~ stress.clim.ca.2$Region / factor(stress.clim.ca.2$PopID) / factor(stress.clim.ca.2$Individual))
 summary(nest_s)
-#TukeyHSD(nest)
+TukeyHSD(nest_s)$'stress.clim.ca.2$Region'
 ```
 
 Linear Mixed Effects Model
 ```{r}
-mixed.lmer_s <- lmer(YII ~ Region + (1|Individual), data = stress.ca)
+mixed.lmer_s <- lmer(YII.mean ~ Region + (1|PopID:Region), data = stress.clim.ca.3)
 summary(mixed.lmer_s)
 plot(mixed.lmer_s)
 qqnorm(resid(mixed.lmer_s)); qqline(resid(mixed.lmer_s))
-#Variance for Individual is 0.0216. Divide this by total variance. 
-0.0122 / (0.0122 + 0.0272) # =0.31
-#Individual explains 31% of the variance left over after the variance explained by our fixed effects.
+#Variance for Population is 0.00429. Divide this by total variance. 
+0.00429 / (0.00429 + 0.00981) # =0.3
+#Individual explains 30% of the variance left over after the variance explained by our fixed effects.
 ```
 
 Multiple Regression
 
 Best Subsets to determine the model with the highest r squared value. 
 ```{r}
-smod.fit <- regsubsets(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=stress.clim.ca, nvmax=10)
+smod.fit <- regsubsets(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=stress.clim.ca.2, nvmax=10)
 sum.smod <- summary(smod.fit)
 sum.smod
 plot(sum.smod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
 adj_r2_max = which.max(sum.smod$adjr2) #6
 points(adj_r2_max, sum.smod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 # Forward Stepwise Selection
-regfit_fwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = stress.clim.ca, nvmax = 10, method = "forward")
-summary(regfit_fwd)
+#regfit_fwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = stress.clim.ca, nvmax = 10, method = "forward")
+#summary(regfit_fwd)
 # Backward Stepwise Selection
-regfit_bwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = stress.clim.ca, nvmax = 10, method = "backward")
-summary(regfit_bwd)
+#regfit_bwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = stress.clim.ca, nvmax = 10, method = "backward")
+#summary(regfit_bwd)
 ```
 
 Creating the multiple regression model
 ```{r}
 smod <- lm(YII ~Elevation + tmax + PPT + vpdmin + solclear + soltrans, data=stress.clim.ca)
-summary(smod) #adjusted r squared = 0.341
+summary(smod) #adjusted r squared = 0.237
 Anova(smod, type=2)
+par(mfrow=c(2,2))
 plot(smod)
+par(mfrow=c(1,1))
 ```
 
 Plotting YII against climatic variables
 ```{r}
-p1 <- ggplot(data=stress.clim.ca, aes(x=tmean, y=YII)) +
+p1 <- ggplot(data=stress.clim.ca.2, aes(x=tmean, y=YII)) +
   geom_point() + theme_bw() + xlab("Mean Annual Temperature") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p2 <- ggplot(data=stress.clim.ca, aes(x=tmax, y=YII)) +
+p2 <- ggplot(data=stress.clim.ca.2, aes(x=tmax, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Max Annual Temperature") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p3 <- ggplot(data=stress.clim.ca, aes(x=tmin, y=YII)) +
+p3 <- ggplot(data=stress.clim.ca.2, aes(x=tmin, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Min Annual Temperature") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p4 <- ggplot(data=stress.clim.ca, aes(x=Elevation, y=YII)) +
+p4 <- ggplot(data=stress.clim.ca.2, aes(x=Elevation, y=YII)) +
   geom_point() + theme_bw() +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
 grid.arrange(p1, p2, p3, p4, ncol=2)
-p5 <- ggplot(data=stress.clim.ca, aes(x=PPT, y=YII)) +
+p5 <- ggplot(data=stress.clim.ca.2, aes(x=PPT, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Precipitation") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p6 <- ggplot(data=stress.clim.ca, aes(x=tdmean, y=YII)) +
+p6 <- ggplot(data=stress.clim.ca.2, aes(x=tdmean, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Dew Point Temperature") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p7 <- ggplot(data=stress.clim.ca, aes(x=vpdmax, y=YII)) +
+p7 <- ggplot(data=stress.clim.ca.2, aes(x=vpdmax, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Max Annual Vapor Pressure Deficit") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p8 <- ggplot(data=stress.clim.ca, aes(x=vpdmin, y=YII)) +
+p8 <- ggplot(data=stress.clim.ca.2, aes(x=vpdmin, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Min Annual Vapor Pressure Deficit") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p9 <- ggplot(data=stress.clim.ca, aes(x=solclear, y=YII)) +
+p9 <- ggplot(data=stress.clim.ca.2, aes(x=solclear, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Solar Radiation") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p10 <- ggplot(data=stress.clim.ca, aes(x=soltrans, y=YII)) +
+p10 <- ggplot(data=stress.clim.ca.2, aes(x=soltrans, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Cloud Transmittance") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
 grid.arrange(p5, p6, p7, p8, p9, p10, ncol=3)
@@ -353,21 +341,12 @@ grid.arrange(p5, p6, p7, p8, p9, p10, ncol=3)
 
 
 
-```{r}
-
-
-```
-
-
-```{r}
-
-
-```
-
 ### ION LEAKAGE ###
 ```{r}
 ion <- read.csv("IonLeakage.csv")
 #Merging the ion leakage data and climate data
+ion$Individual <- as.character(ion$Individual)
+climate$Individual <- as.character(climate$Individual)
 ion.clim <- left_join(ion, climate, by=c("Individual","Region","PopID","Species"))
 colnames(ion.clim) <- c('Individual','PopID','Region','Species','Date','0H','4H','Total.24.Freeze','Percent.Leaked','Latitude','Longitude','Elevation','Date.Found','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') #Renaming columns for legibility
 ion.clim$Percent.Leaked <- as.numeric(ion.clim$Percent.Leaked)
@@ -391,7 +370,7 @@ Individual is a random effect.
 #Make the nested anova
 nest_i <- aov(ion.clim.ca$Percent.Leaked ~ ion.clim.ca$Region / factor(ion.clim.ca$PopID) / factor(ion.clim.ca$Individual))
 summary(nest_i)
-#TukeyHSD(nest)
+TukeyHSD(nest_i)$'ion.clim.ca$Region'
 ```
 
 Linear Mixed Effects Model
@@ -402,7 +381,7 @@ plot(mixed.lmer_i)
 qqnorm(resid(mixed.lmer_i)); qqline(resid(mixed.lmer_i))
 #Variance for Individual is 0.0. Divide this by total variance. 
 0.0 / (0.0 + 34.4) # =0.0
-#Individual explains 31% of the variance left over after the variance explained by our fixed effects.
+#Individual explains 0% of the variance left over after the variance explained by our fixed effects.
 ```
 
 Multiple Regression
@@ -416,17 +395,17 @@ plot(sum.imod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
 adj_r2_max = which.max(sum.imod$adjr2) #6
 points(adj_r2_max, sum.imod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 # Forward Stepwise Selection
-regfit_fwd = regsubsets(Percent.Leaked~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = ion.clim.ca, nvmax = 10, method = "forward")
-summary(regfit_fwd)
+#regfit_fwd = regsubsets(Percent.Leaked~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = ion.clim.ca, nvmax = 10, method = "forward")
+#summary(regfit_fwd)
 # Backward Stepwise Selection
-regfit_bwd = regsubsets(Percent.Leaked~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = ion.clim.ca, nvmax = 10, method = "backward")
-summary(regfit_bwd)
+#regfit_bwd = regsubsets(Percent.Leaked~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = ion.clim.ca, nvmax = 10, method = "backward")
+#summary(regfit_bwd)
 ```
 
 Creating the multiple regression model
 ```{r}
 imod <- lm(Percent.Leaked ~ vpdmax + PPT + solclear, data=ion.clim.ca)
-summary(imod) #adjusted r squared = 0.341
+summary(imod) #adjusted r squared = 0.378
 Anova(imod, type=2)
 par(mfrow = c(2, 2))
 plot(imod)
@@ -529,9 +508,9 @@ The model is Score ~ Region + Pop(Region) + Individual(Pop(Region))
 Individual is a random effect. 
 ```{r}
 #Make the nested anova
-nest_p <- aov(pheno.clim.ca$Score.mean ~ pheno.clim.ca$Region / factor(pheno.clim.ca$PopID) / factor(pheno.clim.ca$Individual))
+nest_p <- aov(pheno.clim.ca$Score.var ~ pheno.clim.ca$Region / factor(pheno.clim.ca$PopID) / factor(pheno.clim.ca$Individual))
 summary(nest_p)
-#TukeyHSD(nest)
+TukeyHSD(nest_p)$'pheno.clim.ca$Region'
 ```
 
 Linear Mixed Effects Model
@@ -556,11 +535,11 @@ plot(sum.pmod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
 adj_r2_max = which.max(sum.pmod$adjr2) #7
 points(adj_r2_max, sum.pmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 # Forward Stepwise Selection
-regfit_fwd = regsubsets(Score.mean ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = pheno.clim.ca, nvmax = 10, method = "forward")
-summary(regfit_fwd)
+#regfit_fwd = regsubsets(Score.mean ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = pheno.clim.ca, nvmax = 10, method = "forward")
+#summary(regfit_fwd)
 # Backward Stepwise Selection
-regfit_bwd = regsubsets(Score.mean ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = pheno.clim.ca, nvmax = 10, method = "backward")
-summary(regfit_bwd)
+#regfit_bwd = regsubsets(Score.mean ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = pheno.clim.ca, nvmax = 10, method = "backward")
+#summary(regfit_bwd)
 ```
 
 Creating the multiple regression model
@@ -623,224 +602,42 @@ recovery.clim.ca.3$K3 <- as.factor(recovery.clim.ca.3$K3)
 
 
 ```{r}
-p1 <- ggplot(data=recovery.clim.ca.3, aes(x=tmean, y=YII, color=K2)) +
-  geom_point() + theme_bw() + xlab("Mean Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p2 <- ggplot(data=recovery.clim.ca.3, aes(x=tmax, y=YII, color=K2)) +
-  geom_point() + theme_bw() + xlab("Average Max Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p3 <- ggplot(data=recovery.clim.ca.3, aes(x=tmin, y=YII, color=K2)) +
-  geom_point() + theme_bw() + xlab("Average Min Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p4 <- ggplot(data=recovery.clim.ca.3, aes(x=Elevation, y=YII, color=K2)) +
-  geom_point() + theme_bw() +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-grid.arrange(p1, p2, p3, p4, ncol=2)
-
+climgroups <- find.clusters(recovery.clim.ca.2[,c(18:25,27,28)], max.n.clust=10)
+climgroups$Kstat
+climgroups$stat
+climgroups$size
+member = cutree(recovery.clim.ca.2[,c(18:25,27,28)],10)
+hclust(recovery.clim.ca.2[,c(18:25,27,28)], method="average")
+kc <- kmeans(recovery.clim.ca.3[,c(13:19,21,22)], 10)
+kc
+k2 <- kmeans(recovery.clim.ca.3[,c(13:19,21,22)], centers=10, nstart=30)
+k2
+fviz_cluster(k2, data = recovery.clim.ca.3[,c(13:19,21,22)])
+fviz_nbclust(recovery.clim.ca.3[,c(13:19,21,22)], kmeans, method="wss")
+fviz_nbclust(recovery.clim.ca.3[,c(13:19,21,22)], kmeans, method="silhouette")
+k2$cluster
+recovery.clim.ca.3$climclust <- k2$cluster
 ```
 
 ```{r}
-p1 <- ggplot(data=recovery.clim.ca.3, aes(x=tmean, y=YII, color=K3)) +
-  geom_point() + theme_bw() + xlab("Mean Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p2 <- ggplot(data=recovery.clim.ca.3, aes(x=tmax, y=YII, color=K3)) +
-  geom_point() + theme_bw() + xlab("Average Max Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p3 <- ggplot(data=recovery.clim.ca.3, aes(x=tmin, y=YII, color=K3)) +
-  geom_point() + theme_bw() + xlab("Average Min Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p4 <- ggplot(data=recovery.clim.ca.3, aes(x=Elevation, y=YII, color=K3)) +
-  geom_point() + theme_bw() +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-grid.arrange(p1, p2, p3, p4, ncol=2)
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Subsetting Data for only TRUE LEAVES
-```{r}
-stress.ca <- stress %>%
+climate.ca <- climate %>%
   filter(Species == "californica")
-recovery.ca <- recovery %>%
-  filter(Species == "californica")
-stress.clim.ca <- stress.clim %>%
-  filter(Species == "californica")
-recovery.clim.ca <- recovery.clim %>%
-  filter(Species == "californica")
-
-stress.ca.tl <- stress.ca %>%
-  filter(Cotyledon.vs.TL == "True Leaf")
-recovery.ca.tl <- recovery.ca %>%
-  filter(Cotyledon.vs.TL == "True Leaf")
-```
-
-### 5 DAY RECOVERY CHLOROPHYLL FLUORESCENCE DATA ###
-
-Nested ANOVA to test the variance of YII. 
-```{r}
-#First create a new column with the variances of each individual
-recovery.ca.tl.2 <- aggregate(YII ~ Individual, 
-                    data=recovery.ca.tl, 
-                    function(x) { 
-                      c(avg=var(x)) 
-                    })
-colnames(recovery.ca.tl.2) <- c('Individual','YII.var')
-recovery.ca.tl.3 <- left_join(recovery.ca.tl.2, recovery.ca.tl, by=c("Individual"))
-recovery.ca.tl.3 <- recovery.ca.tl.3[!duplicated(recovery.ca.tl.3$Individual), ]
-recovery.clim.ca.tl.2 <- left_join(recovery.ca.tl.3, climate, by=c("Individual","Region","PopID","Species"))
-head(recovery.clim.ca.tl.2)
-recovery.clim.ca.tl.2 <- recovery.clim.ca.tl.2[,-c(8,9,10,11,12,23)]
-colnames(recovery.clim.ca.tl.2) <- c('Individual','YII.var','PopID','Region','Species','Heat.Temp','Cotyledon.vs.TL','F','Fm.','Temp','YII','Fo','Fm','Fv.Fm','Latitude','Longitude','Elevation','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') 
-recovery.clim.ca.tl.2 <- recovery.clim.ca.tl.2 %>%
-  filter(Species == "californica")
-recovery.ca.tl.3 <- recovery.ca.tl.3 %>%
-  filter(Species == "californica")
-```
-
-First testing for interactions
-```{r}
-m0 <- lm(YII.var ~ Region, data=recovery.clim.ca.2)
-m1 <- lm(YII.var ~ Region+PopID, data=recovery.clim.ca.2)
-anova(m1,m0) # test for difference in mean(PopID) after control for Rregion
-m2 <- lm(YII.var ~ Region*PopID, data=recovery.clim.ca.2) 
-anova(m2, m1) # test for interaction: different slopes in the two Conditions
-
+fviz_nbclust(climate.ca[,c(7,9:15,17,18)], kmeans, method="wss")
+#look for "bend in the knee" for best k cluster
+fviz_nbclust(climate.ca[,c(7,9:15,17,18)], kmeans, method="silhouette")
+#how well does our data fit into each group?
+set.seed(123)
+gap_stat <- clusGap(climate.ca[,c(7,9:15,17,18)], FUN = kmeans, nstart=30, K.max=10, B=50)
+print(gap_stat, mehtod="firstmax")
+#NbClust(climate.ca[,c(7,9:15,17,18)], diss=NULL, distance="euclidean", min.nc=2, max.nc=10, method="kmeans", index="all", alphaBeale=0.1)
+k <- kmeans(climate.ca[,c(7,9:15,17,18)], centers = 3, nstart=30)
+k$cluster
+climate.ca$clust3<- k$cluster
 ```
 
 
-The model is YII ~ Region + Pop(Region) + Individual(Pop(Region))
-Individual is a random effect. 
-```{r}
-#Make the nested anova
-nest_rtl <- aov(recovery.ca.tl.3$YII.var ~ recovery.ca.tl.3$Region / factor(recovery.ca.tl.3$PopID) / factor(recovery.ca.tl.3$Individual))
-summary(nest_rtl)
-nest_rtl
-#TukeyHSD(nest)
 
-nest2_r <- aov(recovery.ca.3$YII.var ~ recovery.ca.3$Region + recovery.ca.3$Region / factor(recovery.ca.3$PopID) + (recovery.ca.3$Region / factor(recovery.ca.3$PopID) / factor(recovery.ca.3$Individual)))
-summary(nest2_r)
 
-nest3_r <-  aov(recovery.ca.3$YII.var ~ recovery.ca.3$Region * factor(recovery.ca.3$PopID) * factor(recovery.ca.3$Individual))
-summary(nest3_r)
-anova(nest3_r)
-```
-
-Linear Mixed Effects Model
-```{r}
-mixed.lmer_r <- lmer(YII.var ~ Region + (1|PopID:Region), data = recovery.clim.ca.tl.2)
-#mixed.lmer_r2 <- lmer(YII.var ~ Region + (1|PopID) + (Region|Individual), data = recovery.clim.ca.2)
-#mixed.lme_r <- lme(YII.var ~ Region, random = (1|PopID), data=recovery.ca.3)
-#anova(mixed.lmer_r, mixed.lmer_r2)
-summary(mixed.lmer_r)
-#summary(mixed.lmer_r2)
-plot(mixed.lmer_r)
-qqnorm(resid(mixed.lmer_r)); qqline(resid(mixed.lmer_r))
-0.0011 / (0.0011+0.000405) #=0.73
-#PopID explains 73% of the variance left over
-#Variance for Individual is 0.0216. Divide this by total variance. 
-0.014 / (0.014 + 0.0131 + 0.0377) # =0.22
-#Individual explains 22% of the variance left over after the variance explained by our fixed effects.
-0.0131 / (0.014 + 0.0131 + 0.0377) # =0.2
-#Pop ID explains 20% of the variance.
-
-library(effects)
-plot(allEffects(mixed.lmer_r))
-anova(mixed.lmer_r)
-#library(broom)
-#tidy(mixed.lmer_r, effects = "fixed")
-#glance(mixed.lmer_r)
-confint(mixed.lmer_r)
-```
-
-Multiple Regression
-
-Best Subsets to determine the model with the highest r squared value. 
-```{r}
-rmod.fit <- regsubsets(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=recovery.clim.ca.tl.2, nvmax=10)
-sum.rmod <- summary(rmod.fit)
-sum.rmod
-plot(sum.rmod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
-adj_r2_max = which.max(sum.rmod$adjr2) #9
-points(adj_r2_max, sum.rmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
-# Forward Stepwise Selection
-regfit_fwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = recovery.clim.ca.tl.2, nvmax = 10, method = "forward")
-summary(regfit_fwd)
-# Backward Stepwise Selection
-regfit_bwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = recovery.clim.ca.tl.2, nvmax = 10, method = "backward")
-summary(regfit_bwd)
-```
-
-Creating the multiple regression model
-```{r}
-rmod <- lm(YII ~ tmean + Elevation + tdmean + vpdmax + vpdmin + soltrans, data=recovery.clim.ca.tl.2)
-summary(rmod) #adjusted r squared = 0.357
-Anova(rmod, type=2)
-par(mfrow=c(2,2))
-plot(rmod)
-par(mfrow=c(1,1))
-```
-
-Checking correlation of variables. 
-```{r}
-cor.table(recovery.clim.ca.tl.2[,c(21,23:27,29,31,32)])
-rmod <- lm(YII ~ tmean)
-cor_data <- cor((recovery.clim.ca[,c(21,23:27,29,31,32)]))
-cor_data
-cor_matrix_rm <- cor_data                # Modify correlation matrix
-cor_matrix_rm[upper.tri(cor_matrix_rm)] <- 0
-diag(cor_matrix_rm) <- 0
-cor_matrix_rm
-#To remove highly correlated variables
-recovery.clim.ca.4 <- recovery.clim.ca[ , !apply(cor_matrix_rm,2,function(x) any(x > 0.99))]
-```
-
-Plotting YII against climatic variables
-```{r}
-p1 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=tmean, y=YII)) +
-  geom_point() + theme_bw() + xlab("Mean Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p2 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=tmax, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Max Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p3 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=tmin, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Min Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p4 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=Elevation, y=YII)) +
-  geom_point() + theme_bw() +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-grid.arrange(p1, p2, p3, p4, ncol=2)
-p5 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=PPT, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Annual Precipitation") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p6 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=tdmean, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Annual Dew Point Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p7 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=vpdmax, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Max Annual Vapor Pressure Deficit") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p8 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=vpdmin, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Min Annual Vapor Pressure Deficit") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p9 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=solclear, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Annual Solar Radiation") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p10 <- ggplot(data=recovery.clim.ca.tl.2, aes(x=soltrans, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Annual Cloud Transmittance") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-grid.arrange(p5, p6, p7, p8, p9, p10, ncol=3)
-```
 
 
 
