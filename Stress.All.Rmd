@@ -591,34 +591,7 @@ grid.arrange(p5, p6, p7, p8, p9, p10, ncol=3)
 
 
 
-
-```{r}
-structure.ca <- read.csv("Structure_group_ca.csv")
-structure.ca$Individual <- as.factor(structure.ca$Individual)
-recovery.clim.ca.3 <- left_join(recovery.clim.ca.2, structure.ca, by=c("Individual"))
-recovery.clim.ca.3$K2 <- as.factor(recovery.clim.ca.3$K2)
-recovery.clim.ca.3$K3 <- as.factor(recovery.clim.ca.3$K3)
-```
-
-
-```{r}
-climgroups <- find.clusters(recovery.clim.ca.2[,c(18:25,27,28)], max.n.clust=10)
-climgroups$Kstat
-climgroups$stat
-climgroups$size
-member = cutree(recovery.clim.ca.2[,c(18:25,27,28)],10)
-hclust(recovery.clim.ca.2[,c(18:25,27,28)], method="average")
-kc <- kmeans(recovery.clim.ca.3[,c(13:19,21,22)], 10)
-kc
-k2 <- kmeans(recovery.clim.ca.3[,c(13:19,21,22)], centers=10, nstart=30)
-k2
-fviz_cluster(k2, data = recovery.clim.ca.3[,c(13:19,21,22)])
-fviz_nbclust(recovery.clim.ca.3[,c(13:19,21,22)], kmeans, method="wss")
-fviz_nbclust(recovery.clim.ca.3[,c(13:19,21,22)], kmeans, method="silhouette")
-k2$cluster
-recovery.clim.ca.3$climclust <- k2$cluster
-```
-
+Finding climatic clusters
 ```{r}
 climate.ca <- climate %>%
   filter(Species == "californica")
