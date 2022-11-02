@@ -1,0 +1,272 @@
+---
+title: "Stress.Graphs"
+author: "Zachary Snider"
+date: "2022-11-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#Loading in the packages
+library(ggplot2)
+library(tidyr)
+library(hrbrthemes)
+library(plotly)
+library(tibble)
+library(forcats)
+library(scales)
+library(nlme)
+library(lme4)
+```
+
+### ION LEAKAGE ANALYSES ###
+
+Loading the Stress and Recovery Ion Leakage Data
+```{r}
+stress <- read.csv("jrpam_all.csv")
+recovery <- read.csv("jrpam_5day.csv")
+colnames(stress) <- c('Individual','PopID','Region','Species','Heat.Temp','Cotyledon.vs.TL',
+                           'rel.ms','Date.Stress','Time.Stress','Fo.prime','No.',
+                      'F','Fm.','Temp','YII','Fo','Fm','Fv.Fm')
+colnames(recovery) <- c('Individual','PopID','Region','Species','Heat.Temp','Cotyledon.vs.TL',
+                      'rel.ms','Date.Stress','Time.Stress','Fo.prime','No.',
+                      'F','Fm.','Temp','YII','Fo','Fm','Fv.Fm')
+recovery$Individual <- as.factor(recovery$Individual)
+stress$Individual <- as.factor(stress$Individual)
+stress$YII <- as.numeric(stress$YII)
+recovery$YII <- as.numeric(recovery$YII)
+summary(stress$YII)
+stress <- stress %>% 
+  filter(Heat.Temp == "44")
+recovery <- recovery %>%
+  filter(Heat.Temp == "44")
+head(stress)
+head(recovery)
+```
+
+YII plots by Individual
+```{r}
+###Stress plot by Individual
+stressplot1 <- ggplot(data=stress, aes(x=as.factor(Individual), y=YII, fill=as.factor(Region))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Individual ID") +
+  labs(title = "Initial Stress Measurements") +
+  labs(fill="Heat Stress (C°)") +
+  scale_fill_brewer(palette="Set2")
+stressplot1
+###Recovery by Individual
+recoveryplot1 <- ggplot(data=recovery, aes(x=as.factor(Individual), y=as.numeric(YII), fill=as.factor(Region))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Individual") +
+  labs(title = "5 Day Recovery Measurements") +
+  labs(fill="Heat Stress (C°)") +
+  scale_fill_brewer(palette="Set2")
+recoveryplot1
+```
+
+YII plots by Population
+```{r}
+#Stress averaged for each subpop
+stressplot2 <-  ggplot(data=stress, aes(x=as.factor(PopID), y=YII, fill=as.factor(Region))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Population") +
+  labs(title = "Initial Stress Measurements") +
+  labs(fill="Heat Stress (C°)") +
+  scale_fill_brewer(palette="Set2")
+stressplot2
+#Recovery averaged for each subpop
+recoveryplot2 <- ggplot(data=recovery, aes(x=as.factor(PopID), y=as.numeric(YII), fill=as.factor(Region))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Population") +
+  labs(title = "5 Day Recovery Measurements") +
+  labs(fill="Heat Stress (C°)") +
+  scale_fill_brewer(palette="Set2")
+recoveryplot2
+```
+
+
+###PHENOTYPE DATA###
+
+Load the data
+```{r}
+pheno <- read.csv("PhenotypeScores.csv")
+pheno1 <- pivot_longer(pheno, cols = 2:4, names_to = "Time", values_to = "Score")
+##Phenotype by Individual
+pheno2 <- aggregate(Score ~ Individual + Time, 
+                 data=pheno1, 
+                 function(x) { 
+                   c(avg=mean(x)) 
+                 })
+
+pheno2$Individual <- as.factor(pheno2$Individual)
+pheno2$Time <- factor(pheno2$Time, levels=c('Pre.Stress', 'Post.Stress', 'Post.Recovery'))
+```
+
+Phenotype graph by individual
+```{r}
+phenoplot1 <- ggplot(data=pheno2, aes(x=Time, y=Individual,fill=Score)) +
+  geom_tile(color="black", lwd=0.08) +
+  scale_fill_gradient2(low="#318e1e", mid = "#ffff55", high="#ffffe9", 
+                       midpoint = 1.5, na.value = "grey50") +
+  theme_ipsum() +
+  ylab("Individual") +
+  xlab("Time") +
+  labs(title = "Phenotype Score") +
+  scale_x_discrete(labels=c("Pre.Stress" = "Pre Stress", "Post.Stress" = "After Stress",
+                            "Post.Recovery" = "After 5 Day Recovery"))
+phenoplot1
+ggplotly(phenoplot1)
+```
+
+Phenotype graph by subpopulation 
+```{r}
+## Phenotype Scores by Subpopulation
+head(pheno1)
+pheno3 <- aggregate(Score ~ PopID + Time, 
+                    data=pheno1, 
+                    function(x) { 
+                      c(avg=mean(x)) 
+                    })
+head(pheno3)
+pheno3$PopID <- as.factor(pheno3$PopID)
+pheno3$Time <- factor(pheno3$Time, levels=c('Pre.Stress', 'Post.Stress', 'Post.Recovery'))
+phenoplot2 <- ggplot(data=pheno3, aes(x=Time, y=PopID,fill=Score)) +
+  geom_tile(color="black", lwd=0.08) +
+  scale_fill_gradient2(low="#318e1e", mid = "#ffff55", high="#ffffe9", 
+                       midpoint = 1.5, na.value = "gray") +
+  theme_ipsum() +
+  ylab("Subpopulation") +
+  xlab("Time") +
+  labs(title = "Phenotype Score") +
+  scale_x_discrete(labels=c("Pre.Stress" = "Pre Stress", "Post.Stress" = "After Stress",
+                            "Post.Recovery" = "After 5 Day Recovery"))
+phenoplot2
+ggplotly(phenoplot2)
+```
+
+
+###ION LEAKAGE PLOT ####
+loading the data
+```{r}
+ion <- read.csv("IonLeakage.csv")
+ion$Percent.Leaked <- as.numeric(ion$Percent.Leaked)
+ion$Individual <- as.factor(ion$Individual)
+ion$PopID <- as.factor(ion$PopID)
+```
+
+Ion Leakage graph
+```{r}
+ionplot <- ggplot(ion, aes(x=PopID, y=Percent.Leaked, fill = Region)) +
+  geom_boxplot() +
+  theme_bw() +
+  xlab("Subpopulation") +
+  ylab("Percent of Ions Leaked After 4 Hours")
+ionplot
+```
+
+Repeating the YII graphs with only True Leaves
+```{r}
+#Without cotyledons, Only True Leaves
+stressTL <- stress %>% 
+  filter(Cotyledon.vs.TL == "True Leaf")
+recoveryTL <- recovery %>%
+  filter(Cotyledon.vs.TL == "True Leaf")
+```
+
+TL only Initial YII plot by subpop
+```{r}
+stressplotTL <- ggplot(data=stressTL, aes(x=as.factor(PopID), y=YII, fill=as.factor(Region))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Individual ID") +
+  labs(title = "Initial Stress Measurements (True Leaves)") +
+  labs(fill="Heat Stress (C°)") +
+  scale_fill_brewer(palette="Set2")
+stressplotTL
+```
+
+TL only Recovery YII plot by subpop
+```{r}
+recoveryplotTL <- ggplot(data=recoveryTL, aes(x=as.factor(PopID), y=as.numeric(YII), fill=as.factor(Region))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Individual") +
+  labs(title = "5 Day Recovery Measurements (True Leaves)") +
+  labs(fill="Heat Stress (C°)") +
+  scale_fill_brewer(palette="Set2")
+recoveryplotTL
+```
+
+Cotyledon only
+```{r}
+#Only Cotyledon
+stressCTY <- stress %>% 
+  filter(Cotyledon.vs.TL == "Cotyledon")
+recoveryCTY <- recovery %>%
+  filter(Cotyledon.vs.TL == "Cotyledon")
+```
+
+Cotyledon only initial YII plot
+```{r}
+stressplotCTY <- ggplot(data=stressCTY, aes(x=as.factor(PopID), y=YII, fill=as.factor(Region))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Individual ID") +
+  labs(title = "Initial Stress Measurements (Cotyledons)") +
+  labs(fill="Heat Stress (C°)") +
+  scale_fill_brewer(palette="Set2")
+stressplotCTY
+```
+
+Cotyledon only recovery YII plot
+```{r}
+recoveryplotCTY <- ggplot(data=recoveryCTY, aes(x=as.factor(PopID), y=as.numeric(YII), fill=as.factor(Region))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Individual") +
+  labs(title = "5 Day Recovery Measurements (Cotyledons)") +
+  labs(fill="Heat Stress (C°)") +
+  scale_fill_brewer(palette="Set2")
+recoveryplotCTY
+```
+
+Comparing True Leaf and Cotyledon Initial YII values
+```{r}
+#True Leaf vs Cotyledon comparison
+stressplot3 <- stress %>%
+  drop_na(Cotyledon.vs.TL) %>%
+  ggplot(aes(x=as.factor(Region), y=YII, fill=as.factor(Cotyledon.vs.TL))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Individual ID") +
+  labs(title = "Initial Stress Measurements (Cotyledons vs True Leaves)") +
+  labs(fill="Type of Leaf") +
+  scale_fill_manual(values = c("#8DA0CB","#66C2A5","#FC8D62"))
+stressplot3
+```
+
+Comparing True Leaf and Cotyledon Recovery YII values
+```{r}
+recoveryplot3 <- ggplot(data=recovery, aes(x=as.factor(Region), y=as.numeric(YII),
+                                           fill=as.factor(Cotyledon.vs.TL))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("YII") +
+  xlab("Individual") +
+  labs(title = "5 Day Recovery Measurements (Cotyledons vs True Leaves)") +
+  labs(fill="Type of Leaf") +
+  scale_fill_brewer(palette="Set2")
+recoveryplot3
+```
