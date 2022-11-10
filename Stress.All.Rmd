@@ -599,51 +599,6 @@ grid.arrange(p5, p6, p7, p8, p9, p10, ncol=3)
 
 
 Finding climatic clusters
-```{r}
-climgroups <- find.clusters(recovery.clim.ca.2[,c(18:25,27,28)], max.n.clust=10)
-#Enter number of PCs to retain
-#Enter number of groups to retain
-climgroups$Kstat
-climgroups$stat
-climgroups$size
-member = cutree(recovery.clim.ca.2[,c(18:25,27,28)],10)
-hclust(recovery.clim.ca.2[,c(18:25,27,28)], method="average")
-kc <- kmeans(recovery.clim.ca.3[,c(13:19,21,22)], 10)
-kc
-k2 <- kmeans(recovery.clim.ca.3[,c(13:19,21,22)], centers=10, nstart=30)
-k2
-fviz_cluster(k2, data = recovery.clim.ca.3[,c(13:19,21,22)])
-fviz_nbclust(recovery.clim.ca.3[,c(13:19,21,22)], kmeans, method="wss")
-fviz_nbclust(recovery.clim.ca.3[,c(13:19,21,22)], kmeans, method="silhouette")
-k2$cluster
-recovery.clim.ca.3$climclust <- k2$cluster
-```
-
-```{r}
-climate.ca <- climate %>%
-  filter(Species == "californica")
-fviz_nbclust(climate.ca[,c(7,9:15,17,18)], kmeans, method="wss")
-#look for "bend in the knee" for best k cluster
-fviz_nbclust(climate.ca[,c(7,9:15,17,18)], kmeans, method="silhouette")
-#how well does our data fit into each group?
-set.seed(123)
-gap_stat <- clusGap(climate.ca[,c(7,9:15,17,18)], FUN = kmeans, nstart=30, K.max=10, B=50)
-print(gap_stat, method="firstmax")
-#NbClust(climate.ca[,c(7,9:15,17,18)], diss=NULL, distance="euclidean", min.nc=2, max.nc=10, method="kmeans", index="all", alphaBeale=0.1)
-k <- kmeans(climate.ca[,c(7,9:15,17,18)], centers = 3, nstart=30)
-k$cluster
-climate.ca$clust3<- k$cluster
-```
-
-
-
-
-
-
-
-
-
-
 
 Creating a climate distance matrix
 ```{r}
@@ -673,69 +628,7 @@ df.e <- as.data.frame(as.matrix(euclid))
 write.csv(df.e, file="clim.euclid.csv")
 ```
 
-```{r}
-datp <- dat1[!duplicated(dat1$PopID),]
-rownames(datp) = datp$PopID
-datp <- datp[,-c(1)]
-head(datp)
-datp = data.frame(scale(datp))
-euclid_pops=dist(datp, method ="euclidean")
-tree2 = hclust(euclid_pops, method="ward.D")
-colors = c("#00AFBB", "#E7B800", "#FC4E07")
-clus3 = cutree(tree2,3)
-plot(as.phylo(tree2), main="Boechera Climate Regions", type = "tidy", cex=1.4, 
-     tip.color=colors[clus3], label.offset=0.2) 
-#library(ggraph)
-#ggraph(tree2, layout = 'auto', circular = FALSE) +  eom_edge_diagonal() +
-  #geom_node_point() + theme_void()
-clus2 = cutree(tree2,2)
-plot(as.phylo(tree2), main="Boechera Climate Regions", type = "tidy", cex=1.4, 
-     tip.color=colors[clus2], label.offset=0.2) 
-```
-
-
-
-```{r}
-tree=hclust(euclid,method="ward.D")
-colors = c("#CC6666", "#9999CC", "#66CC99")
-clus3 = cutree(tree,3)
-plot(as.phylo(tree), main="Boechera Climate Regions", type="fan", cex=1, 
-     tip.color=colors[clus3], label.offset=0.2) 
-library(ggdendro)
-p <- ggdendrogram(tree, rotate=TRUE, theme_dendro=TRUE)
-library(pvclust)
-tree=pvclust(dat2, method.hclust="ward.D", nboot=1000,method.dist="euclidean")
-# Create the dendrogram with p values
-plot(tree, hang=-1, main="Boechera Climate Regions")
-# add rectangles around g
-
-AIC(tree)
-```
-
-```{r}
-nmds_out=nmds(euclid, mindim=2, maxdim=2) # runs NMDS
-scores=nmds.min(nmds_out) # generate scores
-nmds_out$stress
-PopID = dat1[,1]
-mygroups = sort(unique(PopID)); mygroups 
-plot(scores, pch=19, col=mycol[as.factor(PopID)])
-text(scores+0.2, labels=row.names(dat1)) # add offset labels
-vectors = vf(scores, dat1, nperm=10) # calculate vectors
-plot(vectors, len=0.1, col="red") # add vectors
-library(vegan)
-ordiellipse(scores, PopID, conf=0.6, col=mycol, show.groups=mygroups) 
-```
-
-
-```{r}
-kmeans3=kmeans(euclid, centers=3, iter.max=50, nstart=25)
-kmeans3$size; kmeans3$centers; kmeans3$cluster
-out1=metaMDS(euclid, k=2)
-scores=out1$points[,1:2]
-plot(scores, pch=19, size= 4, col=mycol[as.factor(kmeans3$cluster)])
-text(scores+0.2, labels=PopID)
-```
-
+Finding optimal K
 ```{r}
 fviz_nbclust(dat2, FUNcluster=kmeans, method="wss")
 fviz_nbclust(dat2, FUNcluster=kmeans, method="silhouette")
@@ -748,8 +641,20 @@ fviz_cluster(kmeans3, data=dat2, shape=1,
 #citation("factoextra")
 ```
 
+Using K=3 to find groupings
+```{r}
+kmeans3=kmeans(euclid, centers=3, iter.max=50, nstart=25)
+kmeans3$size; kmeans3$centers; kmeans3$cluster #Prints group membership
+out1=metaMDS(euclid, k=2)
+scores=out1$points[,1:2]
+plot(scores, pch=19, size= 4, col=mycol[as.factor(kmeans3$cluster)])
+text(scores+0.2, labels=PopID)
+```
 
-Loading in Bruvo Distance Matrix
+
+
+
+Loading in Bruvo Genetic Distance Matrix
 ```{r}
 bruv <- read.csv("BruvoDistMat.csv")
 head(bruv)
@@ -840,16 +745,13 @@ Dsquared(a, adjust=T);Dsquared(a2, adjust=T);Dsquared(a4, adjust=T)
 ```
 
 
-
+Adding genetic diversity to YII recovery data
 ```{r}
-head(recovery.clim.ca.2)
 popgen <- read.csv("popgendiversity.csv")
-head(popgen)
 popgen$PopID <- as.factor(popgen$PopID)
 pg <- left_join(recovery.clim.ca.3, popgen, by="PopID")
 head(pg)
 pg[19:28]<- scale(pg[19:28])
-
 ```
 
 ```{r}
@@ -878,7 +780,7 @@ points(bic_max, sum.pmod$bic[bic_max], col ="red", cex = 2, pch = 20)
 ```
 
 ```{r}
-m1 <- lm(YII ~ tmean + Elevation + tmax + tdmean + tmin + PPT + vpdmin + solclear, data=pg)
+m1 <- glm(YII ~ tmean + Elevation + tmax + tdmean + tmin + PPT + vpdmin + solclear, data=pg)
 summary(m1)
 m2 <- glm(YII ~ MultlocFis + Eff_num + Hs + Gis, data=pg)
 Dsquared(m1,adjust=T);Dsquared(m2,adjust=T)
