@@ -35,13 +35,16 @@ setwd("~/Desktop/microsats/Rcode")
 
 PolySat Analysis
 ```{r}
-msbc <- read.GeneMapper("polysat_msats_californica")
+msbc <- read.GeneMapper("polysat_msats_californica1")
 Description(msbc) <- "Boechera californica Microsats collected by ZS"
 #Name populations
 PopNames(msbc) <- c("SD", "LA", "SJ","SB") 
-gpops <- c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-           2,2,2,2,2,2,2,2,2,
-           3,3,3,3,3,3,3,3,3,3,3,1,1)
+gpops <- c(1,1,1,1,1,1,1,1,1,1,
+           1,1,1,1,1,1,1,1,1,1,
+           1,1,1,1,1,1,1,1,1,1,
+           1,1,2,2,2,2,2,2,2,2,
+           2,2,3,3,3,3,3,3,3,3,
+           3,3,3,1,1)
 PopInfo(msbc) <- gpops
 PopInfo(msbc)
 #Assign ploidy
@@ -61,7 +64,7 @@ Usatnts(msbc)
 PCA plots
 ```{r}
 ##Genetic distances between individuals
-testmatrix <- meandistance.matrix(msbc)
+testmatrix <- meandistance.matrix(msbc,distmetric=Bruvo.distance)
 pca1 <- cmdscale(testmatrix)
 mycol <- c("#999999","#E69F00","#56B4E9","#009E73")
 ggplot(pca1, aes(x=pca1[,1], y=pca1[,2], color= as.character(PopInfo(msbc)))) +
@@ -77,7 +80,7 @@ ggplot(pca1, aes(x=pca1[,1], y=pca1[,2], color= as.character(PopInfo(msbc)))) +
   theme_bw(base_size=22)
 #Export with 1100 x 700 pixels
 #Bruvo distance = takes mutational distance between alleles into account (2004)
-
+citation("polysat")
 testmatrix2 <- meandistance.matrix(msbc, distmetric=Lynch.distance)
 pca2 <- cmdscale(testmatrix2)
 ggplot(pca2, aes(x=pca2[,1], y=pca2[,2], color= as.character(PopInfo(msbc)))) +
@@ -173,10 +176,11 @@ popNames(cal)
 
 
 ```{r}
-cal2 <- read.genalex("msat_genalex_californica2.csv", ploidy=4, geo=FALSE)
+cal2 <- read.genalex("msat_genalex_californica2.csv", ploidy=3, geo=FALSE)
 popNames(cal2)
 strata(cal2)
-poppr.amova(cal2, ~Pop, within = FALSE, cutoff = .1, quiet = TRUE)
+rho2 <-poppr.amova(cal2, ~Pop, within = FALSE, cutoff = .1, quiet = TRUE)
+rho2
 ```
 
 ```{r}
@@ -191,25 +195,111 @@ pop(cal) <- p
 
 
 ```{r}
-
+library(EcoGenetics)
+library(methods)
+library(ggplot2)
+require(tibble)
+require(poppr)
+require(ade4)
+require(pwr)
+require(effsize)
+require(sp)
+require(ggmap)
+require(car) 
 ```
 
+Using ECOGEN Package:
+```{r}
+XY <- read.csv('b_coords.csv')
+XY.ca <- XY %>%
+  filter(Species=='californica')
+XY.ca$Individual <- as.factor(XY.ca$Individual)
+E <- read.csv('bca_clim.csv')
+E$Individual <- as.factor(E$Individual)
+E <- left_join(XY.ca, E, by="Individual")
+S <- read.csv('climate.clust.csv')
+S$Individual <- as.factor(S$Individual)
+S <- left_join(XY.ca, S, by="Individual")
+```
 
 ```{r}
-
+ms <- read.csv("msat_genodive_conv.csv")
+ms$Individual <- as.factor(ms$Individual)
+ms[,c(3:62)] <- lapply(ms[,c(3:62)], sprintf, fmt="%03d")
+ms$I3. <- paste(ms$I3,ms$I3.1,ms$I3.2,ms$I3.3, sep="")
+ms$A1. <- paste(ms$A1,ms$A1.1,ms$A1.2,ms$A1.3, sep="")
+ms$B20. <- paste(ms$B20,ms$B20.1,ms$B20.2,ms$B20.3, sep="")
+ms$B11. <- paste(ms$B11,ms$B11.1,ms$B11.2,ms$B11.3, sep="")
+ms$C8. <- paste(ms$C8,ms$C8.1,ms$C8.2,ms$C8.3, sep="")
+ms$I14. <- paste(ms$I14,ms$I14.1,ms$I14.2,ms$I14.3, sep="")
+ms$B9. <- paste(ms$B9,ms$B9.1,ms$B9.2,ms$B9.3, sep="")
+ms$E9. <- paste(ms$E9,ms$E9.1,ms$E9.2,ms$E9.3, sep="")
+ms$B18. <- paste(ms$B18,ms$B18.1,ms$B18.2,ms$B18.3, sep="")
+ms$BF3. <- paste(ms$BF3,ms$BF3.1,ms$BF3.2,ms$BF3.3, sep="")
+ms$B6. <- paste(ms$B6,ms$B6.1,ms$B6.2,ms$B6.3, sep="")
+ms$BF19. <- paste(ms$BF19,ms$BF19.1,ms$BF19.2,ms$BF19.3, sep="")
+ms$BF15. <- paste(ms$BF15,ms$BF15.1,ms$BF15.2,ms$BF15.3, sep="")
+ms$A3. <- paste(ms$A3,ms$A3.1,ms$A3.2,ms$A3.3, sep="")
+ms$B266. <- paste(ms$B266,ms$B266.1,ms$B266.2,ms$B266.3, sep="")
+ms <- ms[,-c(3:62)]
+names(ms) <- gsub("\\.", "", names(ms))
+ms <- left_join(XY.ca, ms, by="Individual")
 ```
-
 
 ```{r}
-
+E.ca <- E[-c(1:5)]
+XY.ca<- XY.ca[-c(1:2)]
+S <- S[,-c(1:4)]
+#G <- G[-c(1:2),]
+#G <- G[,-c(1:2)]
+ms <- ms[,-c(1:5)]
 ```
-
 
 ```{r}
-
+EG <- ecogen(XY= XY.ca, P=NULL,G=ms, E=E.ca, S=S, ploidy=4, type=c("codominant"), sep="", ncod=3, missing=0)
+EG
 ```
 
+```{r}
+dd.genind <- EcoGenetics::ecogen2genind(EG)
+ecoslot.S(EG) #Find names of cluster structures
+amova.result <- poppr::poppr.amova(dd.genind, hier = ~ Region/PopID , 
+                                   within=FALSE, method = "ade4")
+amova.result
+amova.test <- ade4::randtest(amova.result, nrepet = 999)
+amova.test
+```
 
+```{r}
+p <- c('1','1','2','2','2','5','5','5','6','6',
+  '6','6','6','9','9','9','10','10','10','10',
+  '11','11','11','11','12','12','13','13','13','13',
+  '14','14','15','15','15','15','16','17','17','17',
+  '18','18','20','20','20','20','21','21','22','22',
+  '22','22','22','23','23')
+pop(dd.genind) <- p
+pop(dd.genind)
+```
+
+```{r}
+summary(dd.genind)
+round(pegas::hw.test(dd.genind, B=1000), digits=6)
+HWE.test <- data.frame(sapply(seppop(dd.genind),
+                              function(ls) pegas::hw.test(ls, B=0)[,3]))
+HWE.test.chisq <- t(data.matrix(HWE.test))
+HWE.test <- data.frame(sapply(seppop(dd.genind),
+                              function(ls) pegas::hw.test(ls, B=1000)[,4]))
+HWE.test.MC <- t(data.matrix(HWE.test))
+{cat("MC permuation test (p-values):", "\n")
+round(HWE.test.MC,3)}
+alpha=0.05
+prop.loci.out.of.HWE <- data.frame(Chisq=apply(HWE.test.chisq<alpha, 2, mean),
+                                   MC=apply(HWE.test.MC<alpha, 2, mean))
+prop.loci.out.of.HWE
+prop.pops.out.of.HWE <- data.frame(Chisq=apply(HWE.test.chisq<alpha, 1, mean), 
+           MC=apply(HWE.test.MC<alpha, 1, mean))
+prop.pops.out.of.HWE  
+```
 
 
 
