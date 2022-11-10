@@ -41,8 +41,9 @@ library(cluster)
 
 Loading in the data. 
 ```{r}
-setwd("~/Desktop/StressExperiments")
+#setwd("~/Desktop/StressExperiments")
 #setwd("C:/Users/Daniel/Desktop/BoecheraStress-main")
+setwd("~/Documents/GitHub/BoecheraStress")
 stress <- read.csv("jrpam_all.csv")
 recovery <- read.csv("jrpam_5day.csv")
 climate <- read.csv("boechera_climate_data.csv")
@@ -126,9 +127,11 @@ clusts <- read.csv("climate.clust2.csv")
 clusts$PopID <- as.factor(clusts$PopID)
 
 recovery.clim.ca.3 <- left_join(recovery.clim.ca.3, clusts, by=c('PopID'))
-stress.clim.ca.3 <- left_join(stress.clim.ca.3, clusts, by=c('PopID'))
 recovery.clim.ca.3$Clim3 <- as.factor(recovery.clim.ca.3$Clim3)
+recovery.clim.ca.3 <- recovery.clim.ca.3[!duplicated(recovery.clim.ca.3$count), ]
+stress.clim.ca.3 <- left_join(stress.clim.ca.3, clusts, by=c('PopID'))
 stress.clim.ca.3$Clim3 <- as.factor(stress.clim.ca.3$Clim3)
+stress.clim.ca.3 <- stress.clim.ca.3[!duplicated(stress.clim.ca.3$count), ]
 ```
 
 ### 5 DAY RECOVERY CHLOROPHYLL FLUORESCENCE DATA ###
@@ -144,14 +147,14 @@ summary(nest_r)
 nest_r
 TukeyHSD(nest_r)$'recovery.clim.ca.3$Region'
 #Nested ANOVA based on climate cluster
-nest_r2 <- aov(recovery.clim.ca.3$YII.var ~ recovery.clim.ca.3$Clim3 / factor(recovery.clim.ca.3$PopID) / factor(recovery.clim.ca.3$Individual))
-summary(nest_r2)
+#nest_r2 <- aov(recovery.clim.ca.3$YII.var ~ recovery.clim.ca.3$Clim3 / factor(recovery.clim.ca.3$PopID) / factor(recovery.clim.ca.3$Individual))
+#summary(nest_r2)
 ```
 
 YII variance plot
 ```{r}
-vplot <- ggplot(data=recovery.clim.ca.3, aes(x=as.factor(Clim3), y=as.numeric(YII.var),
-                                           fill=as.factor(Clim3))) +
+vplot <- ggplot(data=recovery.clim.ca.3, aes(x=as.factor(PopID), y=as.numeric(YII.var),
+                                           fill=as.factor(Region))) +
   geom_boxplot() +
   theme_bw() +
   xlab("Population") + ylab("YII Variance") + 
@@ -198,7 +201,7 @@ points(adj_r2_max, sum.rmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 # Backward Stepwise Selection
 #regfit_bwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = recovery.clim.ca, nvmax = 10, method = "backward")
 #summary(regfit_bwd)
-citation("leaps")
+#citation("leaps")
 ```
 
 Creating the multiple regression model
@@ -214,7 +217,6 @@ par(mfrow=c(1,1))
 Checking correlation of variables. 
 ```{r}
 cor.table(recovery.clim.ca.2[,c(18:25,27,28)])
-rmod <- lm(YII ~ tmean)
 cor_data <- cor((recovery.clim.ca.2[,c(18:25,27,28)]))
 cor_data
 cor_matrix_rm <- cor_data                # Modify correlation matrix
@@ -305,12 +307,6 @@ plot(sum.smod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
 adj_r2_max = which.max(sum.smod$adjr2) #8
 points(adj_r2_max, sum.smod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 which.max(sum.smod$bic)
-# Forward Stepwise Selection
-#regfit_fwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = stress.clim.ca, nvmax = 10, method = "forward")
-#summary(regfit_fwd)
-# Backward Stepwise Selection
-#regfit_bwd = regsubsets(YII~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = stress.clim.ca, nvmax = 10, method = "backward")
-#summary(regfit_bwd)
 ```
 
 Creating the multiple regression model
@@ -416,12 +412,6 @@ sum.imod
 plot(sum.imod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
 adj_r2_max = which.max(sum.imod$adjr2) #6
 points(adj_r2_max, sum.imod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
-# Forward Stepwise Selection
-#regfit_fwd = regsubsets(Percent.Leaked~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = ion.clim.ca, nvmax = 10, method = "forward")
-#summary(regfit_fwd)
-# Backward Stepwise Selection
-#regfit_bwd = regsubsets(Percent.Leaked~tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = ion.clim.ca, nvmax = 10, method = "backward")
-#summary(regfit_bwd)
 ```
 
 Creating the multiple regression model
@@ -556,18 +546,12 @@ sum.pmod
 plot(sum.pmod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
 adj_r2_max = which.max(sum.pmod$adjr2) #7
 points(adj_r2_max, sum.pmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
-# Forward Stepwise Selection
-#regfit_fwd = regsubsets(Score.mean ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = pheno.clim.ca, nvmax = 10, method = "forward")
-#summary(regfit_fwd)
-# Backward Stepwise Selection
-#regfit_bwd = regsubsets(Score.mean ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data = pheno.clim.ca, nvmax = 10, method = "backward")
-#summary(regfit_bwd)
 ```
 
 Creating the multiple regression model
 ```{r}
 pmod <- lm(Score.mean ~ tmean + tdmean + vpdmax + tmin + PPT + solclear + soltrans, data=pheno.clim.ca)
-summary(pmod) #adjusted r squared = 0.0886
+summary(pmod) #adjusted r squared = 0.0886, p-value = 0.0238
 Anova(pmod, type=2)
 par(mfrow = c(2, 2))
 plot(pmod)
@@ -617,6 +601,8 @@ grid.arrange(p5, p6, p7, p8, p9, p10, ncol=3)
 Finding climatic clusters
 ```{r}
 climgroups <- find.clusters(recovery.clim.ca.2[,c(18:25,27,28)], max.n.clust=10)
+#Enter number of PCs to retain
+#Enter number of groups to retain
 climgroups$Kstat
 climgroups$stat
 climgroups$size
@@ -642,7 +628,7 @@ fviz_nbclust(climate.ca[,c(7,9:15,17,18)], kmeans, method="silhouette")
 #how well does our data fit into each group?
 set.seed(123)
 gap_stat <- clusGap(climate.ca[,c(7,9:15,17,18)], FUN = kmeans, nstart=30, K.max=10, B=50)
-print(gap_stat, mehtod="firstmax")
+print(gap_stat, method="firstmax")
 #NbClust(climate.ca[,c(7,9:15,17,18)], diss=NULL, distance="euclidean", min.nc=2, max.nc=10, method="kmeans", index="all", alphaBeale=0.1)
 k <- kmeans(climate.ca[,c(7,9:15,17,18)], centers = 3, nstart=30)
 k$cluster
@@ -669,8 +655,7 @@ dat2 = data.frame(scale(dat2))
 head(dat2)
 ```
 
-
-
+Creating distance matrix using different methods
 ```{r}
 euclid=dist(dat2, method ="euclidean")
 euclid_sq=euclid^2
@@ -680,9 +665,9 @@ braycurtis=distance(dat2, "bray-curtis")
 mahal_sq=distance(dat2, "mahal")
 mahal=sqrt(mahal_sq)
 #mahal # check how a distance matrix looks like
-
 ```
 
+Convert to a dataframe to write it to a csv file if needed
 ```{r}
 df.e <- as.data.frame(as.matrix(euclid))
 write.csv(df.e, file="clim.euclid.csv")
@@ -760,7 +745,7 @@ fviz_cluster(kmeans3, data=dat2, shape=1,
  ellipse.level=0.7, ellipse.alpha=0.1,
  palette=c("pink3","yellow3","purple"),
  ggtheme=theme_classic(base_size=20))
-citation("factoextra")
+#citation("factoextra")
 ```
 
 
