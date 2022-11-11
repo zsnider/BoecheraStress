@@ -30,7 +30,8 @@ library(dartR)
 ```
 
 ```{r}
-setwd("~/Desktop/microsats/Rcode")
+#setwd("~/Desktop/microsats/Rcode")
+setwd("~/Documents/GitHub/BoecheraStress")
 ```
 
 PolySat Analysis

@@ -36,6 +36,7 @@ library(scales)
 library(nlme)
 library(lme4)
 library(cluster)
+library(modEvA)
 ```
 
 
@@ -653,6 +654,7 @@ text(scores+0.2, labels=PopID)
 
 
 
+##Distance Matrices
 
 Loading in Bruvo Genetic Distance Matrix
 ```{r}
@@ -672,33 +674,7 @@ names(km) = gsub(pattern = "X", replacement = "", x = names(km))
 km2 <- as.dist(km)
 ```
 
-```{r}
-library(graph4lg)
-scatter_dist(
-  bruv2,
-  km2,
-  method = "lm",
-  thr_gd = NULL,
-  thr_ld = NULL,
-  se = TRUE,
-  smooth_col = "black",
-  pts_col = "#999999"
-)
-```
-
-```{r}
-scatter_dist(
-  bruv2,
-  euclid,
-  method = "lm",
-  thr_gd = NULL,
-  thr_ld = NULL,
-  se = TRUE,
-  smooth_col = "black",
-  pts_col = "#999999"
-)
-```
-
+Graphing genetic, climatic, and physical distances
 ```{r}
 dist.df <- data.frame( Bruvo=bruv2[lower.tri(bruv2)], ClimDist=euclid[ lower.tri(euclid)], GeogDist = km2[lower.tri(km2)])
 summary(dist.df)
@@ -722,6 +698,7 @@ distplot3 <- ggplot(dist.df,aes(x=GeogDist,y=ClimDist)) +
 distplot3
 ```
 
+Generalized linear models using distance matrices
 ```{r}
 a <- glm(Bruvo ~ ClimDist, data=dist.df)
 summary(a)
@@ -735,12 +712,8 @@ anova(a3)
 a4 <- glm(Bruvo ~ ClimDist + GeogDist, data=dist.df)
 summary(a4)
 anova(a4)
-AIC(a)
-AIC(a2) #this is lower than aic(a). This model has a better score
-AIC(a3)
-AIC(a4)
-BIC(a);BIC(a2)
-library(modEvA)
+AIC(a);AIC(a2);AIC(a3);AIC(a4)
+BIC(a);BIC(a2);BIC(a3);BIC(a4)
 Dsquared(a, adjust=T);Dsquared(a2, adjust=T);Dsquared(a4, adjust=T)
 ```
 
@@ -754,10 +727,7 @@ head(pg)
 pg[19:28]<- scale(pg[19:28])
 ```
 
-```{r}
-Dsquared(m1,adjust=T);Dsquared(m2,adjust=T)
-```
-
+Bestsubset models using climate variables and genetic diversity variables. Should I maximize model predictability (adjusted R-squared) or model fit(AIC or BIC)?
 ```{r}
 m1a <- regsubsets(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=pg, nvmax=10)
 sum.pmod <- summary(m1a)
@@ -774,19 +744,19 @@ points(adj_r2_max, sum.pmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 m3a <- regsubsets(YII ~  MultlocFis + Eff_num + Ho + Hs + Gis + tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=pg, nvmax=15)
 sum.pmod <- summary(m3a)
 sum.pmod
-plot(sum.pmod$bic,xlab = "Number of Variables", ylab = "BIC")
-bic_max = which.max(sum.pmod$bic) #4
-points(bic_max, sum.pmod$bic[bic_max], col ="red", cex = 2, pch = 20)
+plot(sum.pmod$adjr2,xlab = "Number of Variables", ylab = "Adjusted Rsq")
+adj_r2_max = which.max(sum.pmod$adjr2) #9
+points(adj_r2_max, sum.pmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 ```
 
 ```{r}
 m1 <- glm(YII ~ tmean + Elevation + tmax + tdmean + tmin + PPT + vpdmin + solclear, data=pg)
 summary(m1)
-m2 <- glm(YII ~ MultlocFis + Eff_num + Hs + Gis, data=pg)
-Dsquared(m1,adjust=T);Dsquared(m2,adjust=T)
-m3 <- glm(YII~  MultlocFis, data=pg)
+m2 <- glm(YII ~ MultlocFis + Hs + Gis, data=pg)
+summary(m2)
+m3 <- glm(YII~  MultlocFis + Ho + Hs + tmean + Elevation + vpdmax + tmin + PPT + soltrans, data=pg)
 summary(m3)
-Dsquared(m3)
+Dsquared(m1, adjust=T);Dsquared(m2, adjust=T);Dsquared(m3, adjust=T)
 ```
 
 
@@ -864,6 +834,7 @@ M3 <- glm(Stress ~ ClimDist + GeogDist + NeiG, data=dist.df2)
 Dsquared(M1a);Dsquared(M1b);Dsquared(M1c)
 Dsquared(M2a);Dsquared(M2b);Dsquared(M2c)
 Dsquared(M3)
+
 ```
 
 
