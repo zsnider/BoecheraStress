@@ -1,0 +1,219 @@
+---
+title: "Boechera_ZS_2.15.22"
+author: "Zachary Snider"
+date: "4/15/2022"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(ggfortify)
+library(corrplot)
+library(factoextra)
+library(dplyr)
+library(vegan)
+library(adegenet)
+```
+
+To look at the default color palette used
+```{r}
+library(scales)
+show_col(hue_pal()(4))
+```
+
+Setting directory
+```{r}
+#setwd("~/Desktop/Boechera_GIS")
+#setwd("C:/Users/Daniel/Desktop/BoecheraStress-main")
+setwd("~/Documents/GitHub/BoecheraStress")
+```
+
+Loading the data
+```{r}
+bclim <- read.csv("boechera_climate_data.csv")
+colnames(bclim) <- c('PopID','Individual','Region','Species','Latitude','Longitude','Elevation','Date.Found','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans')
+```
+
+To subset to only b. californica, run this chunk
+```{r}
+bclim <- bclim %>%
+  filter(Species=="californica")
+```
+
+Geographic distribution of Boechera Samples
+```{r}
+plot1 <- ggplot(bclim, aes(x=Latitude,y=Elevation,colour=Region)) + 
+  geom_point(size=4) + 
+  theme_bw() +
+  theme(text = element_text(size=28)) +
+  ylab("Elevation (m)")
+plot1
+```
+
+Histogram of population counts
+```{r}
+plot5 <- ggplot(bclim, aes(x=PopID,fill=Region)) +
+  geom_bar() +
+  theme_bw() +
+  theme(text = element_text(size=20)) +
+  xlab("Populations")
+plot5
+plot6 <- ggplot(bclim, aes(x=Region, fill=Region)) +
+  geom_bar(stat="count") +
+  theme_bw() +
+  theme(text = element_text(size=20)) +
+  geom_text(stat='count', aes(label=..count..), vjust=-.5)
+plot6
+```
+
+Plots against precipitation
+```{r}
+plot7 <-ggplot(bclim, aes(y=PPT, x=Region, fill=Region)) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("Average Annual Precipitation (mm)") +
+  theme(text = element_text(size=20))
+  #+ stat_summary(geom = "crossbar", width=1, fatten=.8, color="black", fun.data = function(x){ return(c(y=median(x), ymin=median(x), ymax=median(x))) })
+plot7
+```
+  
+Plot against soil type (No longer working without soil info)
+```{r, error=TRUE}
+#plot8 <-ggplot(boechera, aes(x=Latitude,y=Elevation,colour=PTYPE)) + 
+  #geom_point(size=4) + theme_bw() +
+  #theme(text = element_text(size=28)) +
+  #ylab("Elevation (m)")
+#plot8
+```
+
+PRISM GIS data
+```{r}
+library(prism)
+#get_prism_normals(type="tmean", resolution = "4km", annual = TRUE, keepZip= TRUE)
+#get_prism_normals("ppt", "800m", annual=TRUE, keepZip= TRUE)
+#get_prism_normals("tmean", "800m", annual=TRUE, keepZip= TRUE)
+#get_prism_normals("tmin", "800m", annual=TRUE, keepZip= TRUE)
+#get_prism_normals("tmax", "800m", annual=TRUE, keepZip= TRUE)
+#get_prism_normals("tdmean", "800m", annual=TRUE, keepZip= TRUE)
+#get_prism_normals("vpdmin", "800m", annual=TRUE, keepZip= TRUE)
+#get_prism_normals("vpdmax", "800m", annual=TRUE, keepZip= TRUE)
+library(raster)
+library(rgdal)
+#rasnam <- "PRISM_tmean_30yr_normal_800mM3_annual_bil.bil"
+#ras<-raster(rasnam) # identify as raster
+#prj<-toString(crs(ras)) #get raster projection
+#plot(ras)
+```
+
+Mean annual temperatures
+```{r}
+plot9 <- ggplot(bclim, aes(y=tmean, x=Region, fill=Region)) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab("Mean Annual Temperature (°C)") +
+  theme(text = element_text(size=20))
+plot9
+```
+
+PCA 
+```{r}
+pca.boc = prcomp(bclim[,c(7,9:15,17,18)], center=TRUE, scale=TRUE)
+summary(pca.boc)
+screeplot(pca.boc, n = 11)
+```
+
+Autoplot with PCA loadings
+```{r, dpi=300}
+autoplot(pca.boc, data = bclim[,c(7,9:15,17,18)], 
+		label = FALSE, loadings = TRUE, 
+		loadings.colour = "black",
+		loadings.label = TRUE,
+		loadings.label.hjust = 1.2) +
+  theme_bw() 
+```
+
+PCA biplot with convex hulls
+```{r rawReducedBiPlot, dpi = 300}
+fviz_pca_biplot(pca.boc, col.ind=bclim$Region, addEllipses=TRUE,
+		mean.point=TRUE, ellipse.type = 'convex',
+		geom.var=c('point','text'), repel=TRUE)
+```
+
+Reducing the data set by using the variables that contribute most to PCs 1 and 2
+```{r}
+var = get_pca_var(pca.boc)
+fviz_contrib(pca.boc, choice='var', axes = 1:2)
+f=fviz_contrib(pca.boc, choice = "var", sort.val=c("desc"), axes = 1:2)
+dat=f$data
+compounds=rownames(dat[dat$contrib>9,])
+reduced.data=bclim[,compounds]
+```
+
+Creating new PCA based on reduced dataset
+```{r}
+pca.red = prcomp(reduced.data, center=TRUE, scale.=TRUE)
+summary(pca.red)
+```
+
+Plotting the reduced PCA
+```{r rawReducedBiPlot, dpi =1 300}
+fviz_pca_biplot(pca.red, col.ind=bclim$Region, addEllipses=TRUE,
+		mean.point=TRUE, ellipse.type = 'convex',
+		geom.var=c('point','text'), repel=TRUE, title = "PCA Biplot using climate") +
+  theme(text = element_text(size = 20),
+        axis.title = element_text(size = 20),
+        axis.text = element_text(size = 20))
+```
+
+
+```{r}
+find.clusters(bclim[7,9:15,17,18])
+```
+
+
+
+
+###
+Analysis of Similarity
+```{r}
+library(vegan)
+# x is a matrix of response variables, grouping is the independent variable
+sim1 = anosim(x = as.matrix(bclim[,c(7,9:15,17,18)]), grouping = boechera$Pop.ID)
+summary(sim1)
+perm = permustats(sim1) # Extract the permutation results from sim1 
+densityplot(perm) # plot the density of R, the test statistic for the anosim
+
+```
+
+
+##Windham data
+```{r}
+wind <- read.csv("arcuata_windham.csv")
+wind2 <- read.csv("arcuata_CA.csv", header=TRUE)
+arcuata<-merge(wind,wind2,by=c("Extrac"))
+arcuata$I3 <- as.numeric(arcuata$I3)
+library(dplyr)
+arcuata <- arcuata %>% 
+     mutate_at(c(8:42), as.numeric)
+```
+
+```{r}
+pca.arc = prcomp(arcuata[,c(8,10,11,13,14,16,18,20,22,24,26,27,31,33,39)], center=TRUE, scale=TRUE, na.action(na.omit))
+summary(pca.arc)
+pca.arc2 = prcomp(arcuata[,c(8:42)], center=TRUE, scale=TRUE, na.action(na.omit))
+summary(pca.arc2)
+```
+
+
+
+
+
+
+
+
+
+
+

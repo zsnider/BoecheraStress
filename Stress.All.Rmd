@@ -200,7 +200,7 @@ plot(m)
 #Individual explains 28 % of the variance left over after fixed effects are taken into account
 0.194/(0.118+0.114+.194) #=0.46
 #PopID explains 46% of the variance left over
-citation("lme4")
+#citation("lme4")
 m1 <- lmer(YII ~ Clim3 + (1|PopID) + (1|Individual), data=recovery.clim.ca.3)
 library(effects)
 plot(allEffects(m))
