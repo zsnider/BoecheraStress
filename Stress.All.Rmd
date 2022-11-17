@@ -878,7 +878,7 @@ m1a <- regsubsets(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT 
 sum.pmod <- summary(m1a)
 sum.pmod
 plot(sum.pmod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
-adj_r2_max = which.max(sum.pmod$adjr2) #8
+adj_r2_max = which.max(sum.pmod$adjr2) #9
 points(adj_r2_max, sum.pmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 m2a <- regsubsets(YII ~  MultlocFis + Eff_num + Ho + Hs + Gis, data=pg, nvmax=5)
 sum.pmod <- summary(m2a)
@@ -890,16 +890,26 @@ m3a <- regsubsets(YII ~  MultlocFis + Eff_num + Ho + Hs + Gis + tmean + Elevatio
 sum.pmod <- summary(m3a)
 sum.pmod
 plot(sum.pmod$adjr2,xlab = "Number of Variables", ylab = "Adjusted Rsq")
-adj_r2_max = which.max(sum.pmod$adjr2) #9
+adj_r2_max = which.max(sum.pmod$adjr2) #7
 points(adj_r2_max, sum.pmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 ```
 
 ```{r}
-m1 <- glm(YII ~ tmean + Elevation + tmax + tdmean + tmin + PPT + vpdmin + solclear, data=pg)
+m1 <- glm(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + PPT + vpdmin + solclear + soltrans, data=pg)
 summary(m1)
-m2 <- glm(YII ~ MultlocFis + Hs + Gis, data=pg)
+m2 <- glm(YII ~ MultlocFis + Eff_num + Ho + Hs + Gis, data=pg)
 summary(m2)
-m3 <- glm(YII~  MultlocFis + Ho + Hs + tmean + Elevation + vpdmax + tmin + PPT + soltrans, data=pg)
+m3 <- glm(YII~  Ho + Hs + Gis + Elevation + tmax + vpdmin + solclear, data=pg)
+summary(m3)
+Dsquared(m1, adjust=T);Dsquared(m2, adjust=T);Dsquared(m3, adjust=T)
+```
+
+```{r}
+m1 <- glm(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=pg)
+summary(m1)
+m2 <- glm(YII ~  MultlocFis + Eff_num + Ho + Hs + Gis, data=pg)
+summary(m2)
+m3 <- glm(YII ~  MultlocFis + Eff_num + Ho + Hs + Gis + tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=pg)
 summary(m3)
 Dsquared(m1, adjust=T);Dsquared(m2, adjust=T);Dsquared(m3, adjust=T)
 ```
@@ -939,7 +949,7 @@ Y2$Individual <- as.factor(Y2$Individual)
 Y2b <- aggregate(YII ~ PopID, 
                     data=Y2, 
                     function(x) { 
-                      c(avg=mean(x)) 
+                      c(avg=var(x)) 
                     })
 Y2b
 Y2d.stress <- dist(Y2b, method="euclidean")
@@ -1005,8 +1015,10 @@ Creating a climate matrix the same size
 dat3 <- dat2[-c(2,4,5,7,8,10:13,15,16,18:20,22:24,26,28:30,32,34:36,39,40,42,44:46,48,50:54),] #pops only
 dat3 <- dat3[-c(12,14,18),]
 head(dat3)
+dat3 <- scale(dat3)
 # to remove pop 5
 dat3 <- dat3[-3,]
+
 euclid.clim.subset=dist(dat3, method ="euclidean")
 ```
 
@@ -1037,6 +1049,12 @@ km.subset.d <- log(km.subset.d)
 Y2d.stress <-  log(Y2d.stress)
 ```
 
+```{r}
+head(ngpop2)
+head(euclid.clim.subset)
+head(km.subset.d)
+head(Y2d.stress)
+```
 
 
 Creating the distance matrix dataframe with YII
@@ -1055,7 +1073,7 @@ M1b <-glm(Stress ~ GeogDist, data=dist.df2)
 M1c <-glm(Stress ~ GenDist, data=dist.df2)
 cand.mods <- list("Climate" = M1a, "Geography" = M1b, "Genetic" = M1c)
 selectionTable <- aictab(cand.set = cand.mods)
-#selectionTable
+selectionTable
 #confset(cand.set = cand.mods)
 Dsquared(M1a);Dsquared(M1b);Dsquared(M1c)
 ```
@@ -1080,6 +1098,27 @@ Dsquared(M3)
 #AIC(M1a);AIC(M1b);AIC(M1c)
 #AIC(M2a);AIC(M2b);AIC(M2c);AIC(M3)
 ```
+
+```{r}
+head(ngpop2)
+head(euclid.clim.subset)
+head(km.subset.d)
+head(Y2d.stress)
+```
+
+Multiple regression on distance matrices
+```{r}
+library(ecodist)
+MRM1 <-MRM(Y2d.stress ~ ngpop2 + euclid.clim.subset + km.subset.d, nperm=1000, method="linear", mrank=FALSE)
+MRM(Y2d.stress ~ ngpop2, nperm=1000, method="linear", mrank=FALSE)
+MRM(Y2d.stress ~ euclid.clim.subset, nperm=1000, method="linear", mrank=FALSE)
+MRM(Y2d.stress ~ km.subset.d, nperm=1000, method="linear", mrank=FALSE)
+MRM1
+AIC(MRM1)
+MRM(Ion.dist ~ ngpop2 + euclid.clim.subset + km.subset.d, nperm=1000, method="linear", mrank=FALSE)
+```
+
+
 
 ```{r}
 M1a <- lm(Stress ~ ClimDist, data=dist.df2)
