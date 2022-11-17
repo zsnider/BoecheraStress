@@ -77,7 +77,7 @@ ggplot(pca1, aes(x=pca1[,1], y=pca1[,2], color= as.character(PopInfo(msbc)))) +
                alpha = 0.2) +
   labs(x="Principal Component 1", y="Principal Component 2") +
   labs(title = "PCA with Bruvo Distance using only B. californica") +
-  scale_fill_discrete(name ="Regions", labels = c("SD","LA","SJ","SB")) +
+  scale_fill_discrete(name ="Regions", labels = c("SD","LA","SJ")) +
   guides(color = "none") + 
   theme_bw(base_size=22)
 #Export with 1100 x 700 pixels
@@ -110,6 +110,24 @@ gpops <- c(1,1,2,2,2,2,2,2,2,2,
            3,3,2,2,2,2,2,2,2,2,
            2,2,2,1,1)
 PopInfo(msbc) <- gpops
+PopInfo(msbc)
+```
+PCA with climate clusters
+```{r}
+testmatrix <- meandistance.matrix(msbc,distmetric=Bruvo.distance)
+pca1 <- cmdscale(testmatrix)
+mycol <- c("#999999","#E69F00","#56B4E9","#009E73")
+ggplot(pca1, aes(x=pca1[,1], y=pca1[,2], color= as.character(PopInfo(msbc)))) +
+  geom_point(size=2) +
+  
+  stat_ellipse(geom = "polygon",
+               aes(fill = as.character(PopInfo(msbc))), 
+               alpha = 0.2) +
+  labs(x="Principal Component 1", y="Principal Component 2") +
+  labs(title = "PCA with Bruvo Distance using only B. californica") +
+  scale_fill_discrete(name ="Climate", labels = c("Clim1","Clim2","Clim3")) +
+  guides(color = "none") + 
+  theme_bw(base_size=22)
 ```
 By 2 Structure groups
 ```{r}
@@ -122,7 +140,23 @@ gpops <- c(2,2,1,1,1,1,2,1,2,1,
            2,2,2,1,1)
 PopInfo(msbc) <- gpops
 ```
-
+PCA with Structure Groups
+```{r}
+testmatrix <- meandistance.matrix(msbc,distmetric=Bruvo.distance)
+pca1 <- cmdscale(testmatrix)
+mycol <- c("#999999","#E69F00","#56B4E9","#009E73")
+ggplot(pca1, aes(x=pca1[,1], y=pca1[,2], color= as.character(PopInfo(msbc)))) +
+  geom_point(size=2) +
+  
+  stat_ellipse(geom = "polygon",
+               aes(fill = as.character(PopInfo(msbc))), 
+               alpha = 0.2) +
+  labs(x="Principal Component 1", y="Principal Component 2") +
+  labs(title = "PCA with Bruvo Distance using only B. californica") +
+  scale_fill_discrete(name ="Genetic Clusters", labels = c("Structure Group 1", "Structure Group 2")) +
+  guides(color = "none") + 
+  theme_bw(base_size=22)
+```
 
 Basic Fst calculations
 ```{r}

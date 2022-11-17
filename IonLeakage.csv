@@ -1,6 +1,6 @@
-Individual,PopID,Region,Species,Date,0H,4H,Total.24.Freeze,Percent.Leaked
-1.01,1,San Diego,californica,,,,,#DIV/0!
-2.01,2,San Diego,californica,,,,,#DIV/0!
+Individual,PopID,Region,Species,Date,0H (_S/cm2),4H (_S/cm2),Total 24H Freeze (_S/cm2),% Leaked at 4hr
+1.01,1,San Diego,californica,11/5/22,2.46,5.59,18.3,17.1
+2.01,2,San Diego,californica,11/5/22,2.38,3.37,8.91,11.11
 2.02,2,San Diego,californica,10/8/22,1.65,5,16.32,20.53
 4.01,4,San Diego,arcuata x retrofracta x sparsiflora,10/8/22,1.65,5.35,22.5,16.44
 5.01,5,San Diego,californica,10/8/22,1.74,4.34,10.73,24.23
@@ -18,7 +18,7 @@ Individual,PopID,Region,Species,Date,0H,4H,Total.24.Freeze,Percent.Leaked
 6.11,6,San Diego,californica,10/10/22,1.65,6.14,20.42,21.99
 6.11,6,San Diego,californica,10/20/22,1.13,3.35,17.74,12.51
 7.05,7,San Diego,californica,,,,,#DIV/0!
-7.06,7,San Diego,perennans x rectissima x retrofracta,,,,,#DIV/0!
+7.06,7,San Diego,perennans x rectissima x retrofracta,11/5/22,2.54,5.78,25.8,12.56
 8.01,8,San Diego,arcuata x retrofracta x sparsiflora,10/20/22,1.2,4.58,32.6,10.37
 8.02,8,San Diego,arcuata x retrofracta x sparsiflora,10/20/22,1.22,7.15,31.7,18.71
 8.02,8,San Diego,arcuata x retrofracta x sparsiflora,,,,,#DIV/0!
@@ -40,17 +40,17 @@ Individual,PopID,Region,Species,Date,0H,4H,Total.24.Freeze,Percent.Leaked
 11.04,11,San Diego,californica,,,,,#DIV/0!
 12.01,12,San Diego,californica,10/21/22,1.53,11.69,37.1,27.39
 13.01,13,San Diego,californica,,,,,#DIV/0!
-13.07,13,San Diego,californica,,,,,#DIV/0!
+13.07,13,San Diego,californica,11/5/22,2.32,5.61,15.58,21.12
 13.09,13,San Diego,californica,10/21/22,1.58,3.9,7.35,31.56
 14.02,14,San Diego,californica,,,,,#DIV/0!
-14.03,14,San Diego,californica,,,,,#DIV/0!
+14.03,14,San Diego,californica,11/5/22,2.38,5.93,20.86,17.02
 14.04,14,San Diego,californica,10/21/22,1.57,4.25,9.95,26.93
 15.02,15,Los Angeles,californica,10/21/22,1.53,4.1,10.05,25.57
 15.02,15,Los Angeles,californica,,,,,#DIV/0!
-15.05,15,Los Angeles,californica,,,,,#DIV/0!
+15.05,15,Los Angeles,californica,11/5/22,2.3,4.57,11.35,20
 16.03,16,Los Angeles,arcuata,10/21/22,1.61,2.58,4.23,22.93
 16.03,16,Los Angeles,arcuata,,,,,#DIV/0!
-17.02,17,Los Angeles,californica,,,,,#DIV/0!
+17.02,17,Los Angeles,californica,11/5/22,2.36,5.06,13.96,19.34
 17.02,17,Los Angeles,californica,,,,,#DIV/0!
 19.05,19,Los Angeles,arcuata x sparsiflora x sparsiflora,10/17/22,1.75,9.32,48,15.77
 19.08,19,Los Angeles,arcuata x sparsiflora x sparsiflora,10/21/22,1.52,5.9,25.52,17.16
@@ -60,7 +60,7 @@ Individual,PopID,Region,Species,Date,0H,4H,Total.24.Freeze,Percent.Leaked
 20.02,20,San Jacinto,californica,10/17/22,1.78,6.31,24.89,18.2
 20.03,20,San Jacinto,californica,10/21/22,1.52,4.46,21.35,13.77
 20.08,20,San Jacinto,californica,10/21/22,1.54,4.78,47.6,6.81
-21.01,21,San Jacinto,californica,,,,,#DIV/0!
+21.01,21,San Jacinto,californica,11/5/22,2.29,5.23,21.39,13.74
 21.02,21,San Jacinto,californica,10/21/22,1.63,4.53,19.62,14.78
 22.02,22,San Jacinto,californica,10/21/22,1.56,3.21,20.8,7.93
 22.02,22,San Jacinto,californica,,,,,#DIV/0!
@@ -72,6 +72,11 @@ Individual,PopID,Region,Species,Date,0H,4H,Total.24.Freeze,Percent.Leaked
 26.01,26,San Bernadino,perennans x rectissima x retrofracta,10/21/22,1.6,4.73,23.25,13.46
 29.01,29,San Bernadino,perennans x rectissima x retrofracta,10/21/22,1.56,4.9,30.2,11.06
 31.01,31,San Bernadino,perennans x rectissima x retrofracta,10/21/22,1.54,4.07,23.1,10.95
-B. arcuata 527,MW,MW,arcuata,,,,,#DIV/0!
-B. retrofracta 485,MW,MW,retrofracta,,,,,#DIV/0!
-B. retrofracta 486,MW,MW,retrofracta,,,,,#DIV/0!
+B. arcuata 527 A,527,MW,arcuata,11/9/22,1.93,4.31,7.82,30.43
+B. arcuata 527 B,527,MW,arcuata,11/9/22,1.5,7.84,16.85,37.63
+B. arcuata 527 C,527,MW,arcuata,11/9/22,1.58,8.55,11.33,61.52
+B. arcuata 527 D,527,MW,arcuata,11/9/22,1.52,7.46,10.27,57.84
+B. arcuata 527 E,527,MW,arcuata,11/9/22,1.75,6.33,8.87,51.63
+B. arcuata 527 F,527,MW,arcuata,11/9/22,1.47,5.27,12.6,30.16
+B. retrofracta 485,485,MW,retrofracta,,,,,#DIV/0!
+B. retrofracta 486,486,MW,retrofracta,11/9/22,1.42,6.81,29.04,18.56
