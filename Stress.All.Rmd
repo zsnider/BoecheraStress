@@ -933,7 +933,7 @@ Y2$Individual <- as.factor(Y2$Individual)
 Y2b <- aggregate(YII ~ PopID, 
                     data=Y2, 
                     function(x) { 
-                      c(avg=mean(x)) 
+                      c(avg=var(x)) 
                     })
 Y2b
 Y2d.stress <- dist(Y2b, method="euclidean")
@@ -1001,6 +1001,24 @@ ngpop <- ngpop[-3,]
 ngpop2 <- as.dist(ngpop)
 ```
 
+New Nei G dist matrix
+```{r}
+ngpop <- read.csv("NeiGpopdist2.csv")
+rownames(ngpop) <- ngpop$X
+ngpop <- ngpop[,-1]
+ngpop2 <- as.dist(ngpop)
+```
+
+Jost D genetic matrix
+```{r}
+ngpop <- read.csv("geneticjostdpop.csv")
+rownames(ngpop) <- ngpop$X
+ngpop <- ngpop[,-1]
+ngpop2 <- as.dist(ngpop)
+```
+
+
+
 Creating a genetic distance matrix based on euclidean distances
 ```{r}
 ngpop <- read.csv("geneticeuclidpop.csv")
@@ -1021,7 +1039,7 @@ head(dat3)
 dat3 <- scale(dat3)
 # to remove pop 5
 dat3 <- dat3[-3,]
-hist(dat3)
+#hist(dat3)
 euclid.clim.subset=dist(dat3, method ="euclidean")
 #climd <- data.frame(as.matrix(euclid.clim.subset))
 #write.csv(climd, "climpopdist.csv")
@@ -1038,17 +1056,17 @@ km.subset <- km.subset[-3,]
 km.subset.d <- as.dist(km.subset)
 ```
 
+Creating a mahal distance climate matrix
+```{r}
+mahal_sq=distance(dat3, "mahalanobis")
+mahal=sqrt(mahal_sq)
+```
+
 ```{r}
 hist(mahal_sq)
 hist(ngpop2)
 hist(euclid.clim.subset)
 hist(Y2d.stress)
-```
-
-Creating a mahal distance climate matrix
-```{r}
-mahal_sq=distance(dat3, "mahal")
-mahal=sqrt(mahal_sq)
 ```
 
 Sqrt transforming everything
@@ -1073,6 +1091,25 @@ head(euclid.clim.subset)
 head(km.subset.d)
 head(Y2d.stress)
 ```
+
+Multiple regression on distance matrices
+```{r}
+library(ecodist)
+MRM(Y2d.stress ~ ngpop2 + mahal_sq + km.subset.d, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ ngpop2 + euclid.clim.subset + km.subset.d, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ ngpop2, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ euclid.clim.subset, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ km.subset.d, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ mahal_sq, nperm=1000, method="linear", mrank=F)
+
+AIC(MRM1)
+MRM(Ion.dist ~ ngpop2 + mahal_sq + km.subset.d, nperm=1000, method="linear", mrank=F)
+MRM(Ion.dist ~ km.subset.d, nperm=1000, method="linear", mrank=FALSE)
+```
+
+
+
+
 
 
 Creating the distance matrix dataframe with YII
@@ -1117,27 +1154,8 @@ Dsquared(M3)
 #AIC(M2a);AIC(M2b);AIC(M2c);AIC(M3)
 ```
 
-```{r}
-head(ngpop2)
-head(euclid.clim.subset)
-head(km.subset.d)
-head(Y2d.stress)
-```
 
-Multiple regression on distance matrices
-```{r}
-library(ecodist)
-MRM(Y2d.stress ~ ngpop2 + mahal_sq + km.subset.d, nperm=1000, method="linear", mrank=F)
-MRM(Y2d.stress ~ ngpop2 + euclid.clim.subset + km.subset.d, nperm=1000, method="linear", mrank=F)
-MRM(Y2d.stress ~ ngpop2, nperm=1000, method="linear", mrank=F)
-MRM(Y2d.stress ~ euclid.clim.subset, nperm=1000, method="linear", mrank=F)
-MRM(Y2d.stress ~ km.subset.d, nperm=1000, method="linear", mrank=F)
-MRM(Y2d.stress ~ mahal_sq, nperm=1000, method="linear", mrank=F)
 
-AIC(MRM1)
-MRM(Ion.dist ~ ngpop2 + mahal_sq + km.subset.d, nperm=1000, method="linear", mrank=F)
-MRM(Ion.dist ~ km.subset.d, nperm=1000, method="linear", mrank=FALSE)
-```
 
 
 
