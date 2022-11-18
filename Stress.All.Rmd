@@ -740,6 +740,7 @@ euclid_sqrt=sqrt(euclid)
 library(ecodist)
 braycurtis=distance(dat2, "bray-curtis")
 mahal_sq=distance(dat2, "mahal")
+hist(mahal_sq)
 mahal=sqrt(mahal_sq)
 #mahal # check how a distance matrix looks like
 ```
@@ -936,6 +937,8 @@ Y2b <- aggregate(YII ~ PopID,
                     })
 Y2b
 Y2d.stress <- dist(Y2b, method="euclidean")
+#Y2d <- data.frame(as.matrix(Y2d.stress))
+#write.csv(Y2d, "YII.pop.distance.csv")
 #shapiro.test(Y2d.stress)
 #hist(Y2d.stress)
 #hist(sqrt(Y2d.stress))
@@ -949,7 +952,7 @@ Y2$Individual <- as.factor(Y2$Individual)
 Y2b <- aggregate(YII ~ PopID, 
                     data=Y2, 
                     function(x) { 
-                      c(avg=var(x)) 
+                      c(avg=mean(x)) 
                     })
 Y2b
 Y2d.stress <- dist(Y2b, method="euclidean")
@@ -1018,8 +1021,10 @@ head(dat3)
 dat3 <- scale(dat3)
 # to remove pop 5
 dat3 <- dat3[-3,]
-
+hist(dat3)
 euclid.clim.subset=dist(dat3, method ="euclidean")
+#climd <- data.frame(as.matrix(euclid.clim.subset))
+#write.csv(climd, "climpopdist.csv")
 ```
 
 Creating a physical distance matrix the same size
@@ -1031,6 +1036,19 @@ head(km.subset)
 km.subset <- km.subset[,-3]
 km.subset <- km.subset[-3,]
 km.subset.d <- as.dist(km.subset)
+```
+
+```{r}
+hist(mahal_sq)
+hist(ngpop2)
+hist(euclid.clim.subset)
+hist(Y2d.stress)
+```
+
+Creating a mahal distance climate matrix
+```{r}
+mahal_sq=distance(dat3, "mahal")
+mahal=sqrt(mahal_sq)
 ```
 
 Sqrt transforming everything
@@ -1109,13 +1127,16 @@ head(Y2d.stress)
 Multiple regression on distance matrices
 ```{r}
 library(ecodist)
-MRM1 <-MRM(Y2d.stress ~ ngpop2 + euclid.clim.subset + km.subset.d, nperm=1000, method="linear", mrank=FALSE)
-MRM(Y2d.stress ~ ngpop2, nperm=1000, method="linear", mrank=FALSE)
-MRM(Y2d.stress ~ euclid.clim.subset, nperm=1000, method="linear", mrank=FALSE)
-MRM(Y2d.stress ~ km.subset.d, nperm=1000, method="linear", mrank=FALSE)
-MRM1
+MRM(Y2d.stress ~ ngpop2 + mahal_sq + km.subset.d, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ ngpop2 + euclid.clim.subset + km.subset.d, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ ngpop2, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ euclid.clim.subset, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ km.subset.d, nperm=1000, method="linear", mrank=F)
+MRM(Y2d.stress ~ mahal_sq, nperm=1000, method="linear", mrank=F)
+
 AIC(MRM1)
-MRM(Ion.dist ~ ngpop2 + euclid.clim.subset + km.subset.d, nperm=1000, method="linear", mrank=FALSE)
+MRM(Ion.dist ~ ngpop2 + mahal_sq + km.subset.d, nperm=1000, method="linear", mrank=F)
+MRM(Ion.dist ~ km.subset.d, nperm=1000, method="linear", mrank=FALSE)
 ```
 
 
