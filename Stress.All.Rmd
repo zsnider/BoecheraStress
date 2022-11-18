@@ -735,6 +735,7 @@ head(dat2)
 Creating distance matrix using different methods
 ```{r}
 euclid=dist(dat2, method ="euclidean")
+euclid
 euclid_sq=euclid^2
 euclid_sqrt=sqrt(euclid)
 library(ecodist)
@@ -1003,7 +1004,7 @@ ngpop2 <- as.dist(ngpop)
 
 New Nei G dist matrix
 ```{r}
-ngpop <- read.csv("NeiGpopdist2.csv")
+ngpop <- read.csv("NeiGpopdist3.csv")
 rownames(ngpop) <- ngpop$X
 ngpop <- ngpop[,-1]
 ngpop2 <- as.dist(ngpop)
@@ -1035,10 +1036,10 @@ Creating a climate matrix the same size
 ```{r}
 dat3 <- dat2[-c(2,4,5,7,8,10:13,15,16,18:20,22:24,26,28:30,32,34:36,39,40,42,44:46,48,50:54),] #pops only
 dat3 <- dat3[-c(12,14,18),]
-head(dat3)
-dat3 <- scale(dat3)
 # to remove pop 5
 dat3 <- dat3[-3,]
+head(dat3)
+dat3 = data.frame(scale(dat3))
 #hist(dat3)
 euclid.clim.subset=dist(dat3, method ="euclidean")
 #climd <- data.frame(as.matrix(euclid.clim.subset))
@@ -1060,6 +1061,7 @@ Creating a mahal distance climate matrix
 ```{r}
 mahal_sq=distance(dat3, "mahalanobis")
 mahal=sqrt(mahal_sq)
+(mahal_sq)
 ```
 
 ```{r}
