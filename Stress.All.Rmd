@@ -155,6 +155,12 @@ stress.clim.ca.3$Clim3 <- as.factor(stress.clim.ca.3$Clim3)
 stress.clim.ca.3 <- stress.clim.ca.3[!duplicated(stress.clim.ca.3$count), ]
 ```
 
+To scale the climate data, run this chunk
+```{r}
+recovery.clim.ca.2[19:28] <- scale(recovery.clim.ca.2[19:28])
+stress.clim.ca.2[19:28] <-
+```
+
 
 ### 5 DAY RECOVERY CHLOROPHYLL FLUORESCENCE DATA ###
 
@@ -229,7 +235,7 @@ Multiple Regression
 
 Best Subsets to determine the model with the highest r squared value. 
 ```{r}
-rmod.fit <- regsubsets(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=recovery.clim.ca, nvmax=10)
+rmod.fit <- regsubsets(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=recovery.clim.ca.2, nvmax=10)
 sum.rmod <- summary(rmod.fit)
 sum.rmod
 plot(sum.rmod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
@@ -246,7 +252,7 @@ points(adj_r2_max, sum.rmod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 
 Creating the multiple regression model
 ```{r}
-rmod <- lm(YII ~ tmean + Elevation + tmax  + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=recovery.clim.ca)
+rmod <- lm(YII ~ tmean + Elevation + tmax  + tdmean + vpdmax + tmin + PPT + vpdmin + solclear + soltrans, data=recovery.clim.ca.2)
 summary(rmod) #adjusted r squared = 0.2943
 rmod
 RSME.rmod <- sqrt(mean(rmod$residuals^2))
@@ -290,19 +296,19 @@ p5 <- ggplot(data=recovery.clim.ca, aes(x=PPT, y=YII)) +
 p5
 p6 <- ggplot(data=recovery.clim.ca, aes(x=tdmean, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Dew Point Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+  geom_smooth(method="loess", alpha=0.3, linetype="longdash", color="#0072B2")
 p7 <- ggplot(data=recovery.clim.ca, aes(x=vpdmax, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Max Annual Vapor Pressure Deficit") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+  geom_smooth(method="loess", alpha=0.3, linetype="longdash", color="#0072B2")
 p8 <- ggplot(data=recovery.clim.ca, aes(x=vpdmin, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Min Annual Vapor Pressure Deficit") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+  geom_smooth(method="loess", alpha=0.3, linetype="longdash", color="#0072B2")
 p9 <- ggplot(data=recovery.clim.ca, aes(x=solclear, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Solar Radiation") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+  geom_smooth(method="loess", alpha=0.3, linetype="longdash", color="#0072B2")
 p10 <- ggplot(data=recovery.clim.ca, aes(x=soltrans, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Cloud Transmittance") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+  geom_smooth(method="loess", alpha=0.3, linetype="longdash", color="#0072B2")
 grid.arrange(p5, p6, p7, p8, p9, p10, ncol=2)
 #grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
 ```
@@ -366,7 +372,7 @@ smod.fit <- regsubsets(YII ~ tmean + Elevation + tmax + tdmean + vpdmax + tmin +
 sum.smod <- summary(smod.fit)
 sum.smod
 plot(sum.smod$adjr2,xlab = "Number of Variables", ylab = "Adjusted RSq")
-adj_r2_max = which.max(sum.smod$adjr2) #8
+adj_r2_max = which.max(sum.smod$adjr2) #9
 points(adj_r2_max, sum.smod$adjr2[adj_r2_max], col ="red", cex = 2, pch = 20)
 which.max(sum.smod$bic)
 ```
@@ -446,6 +452,12 @@ To include B arcuata, B retrofracta, and B californica, run this chunk
 ```{r}
 ion.clim.ca <- ion.clim %>%
   filter(Species == "retrofracta" | Species == "californica" | Species == "arcuata")
+```
+
+To scale the climate data, run this chunk
+```{r}
+ion.clim.ca <- ion.clim.ca[,-c(13,21)]
+ion.clim.ca[12:21] <- scale(ion.clim.ca[12:21])
 ```
 
 Ion Leakage plot
@@ -631,6 +643,12 @@ to filter for only post recovery, run this chunk
 ```{r}
 pheno.clim.ca <- pheno.clim.ca %>%
   filter(Time == "postrecovery")
+```
+
+To scale climate data, run this chunk
+```{r}
+pheno.clim.ca <- pheno.clim.ca[,-c(11,19)]
+pheno.clim.ca[10:19] <- scale(pheno.clim.ca[10:19])
 ```
 
 Nested ANOVA to test the variance of Phenotype Score. 
@@ -903,7 +921,7 @@ Y2$Individual <- as.factor(Y2$Individual)
 Y2b <- aggregate(YII ~ PopID, 
                     data=Y2, 
                     function(x) { 
-                      c(avg=mean(x)) 
+                      c(avg=var(x)) 
                     })
 Y2b
 Y2d.stress <- dist(Y2b, method="euclidean")
@@ -1093,6 +1111,7 @@ MRM(Y2d.stress ~ gendist, nperm=1000, method="linear", mrank=F)
 MRM(Y2d.stress ~ climdist + km.subset.d, nperm=1000, method="linear", mrank=F)
 MRM(Y2d.stress ~ km.subset.d, nperm=1000, method="linear", mrank=F)
 MRM(Y2d.stress ~ mahal_sq, nperm=1000, method="linear", mrank=F)
+MRM(gendist ~ km.subset.d + climdist, nperm=1000, method="linear",mrank=F)
 
 AIC(MRM1)
 MRM(Ion.dist ~ gendist + mahal_sq + km.subset.d, nperm=1000, method="linear", mrank=F)
@@ -1169,6 +1188,26 @@ MRM(Y2d.stress ~ gendist + km.subset.d + elev + temp + ppt + vpd + solrad + clou
 
 
 
+
+
+
+
+```{r}
+dist.df <- data.frame( GenDist=gendist[lower.tri(gendist)], ClimDist=climdist[lower.tri(climdist)], GeogDist = km.subset.d[lower.tri(km.subset.d)])
+summary(dist.df)
+distplot1 <- ggplot(dist.df,aes(x=ClimDist,y=GenDist)) + 
+  geom_point() +
+  theme_bw(base_size=20) +
+  xlab("Climate Distance") + ylab("Genetic Distance (linearized D)") +
+  geom_smooth(method="lm", alpha=0.15, linetype="solid", color="#0072B2")
+distplot1
+distplot2 <- ggplot(dist.df,aes(x=GeogDist,y=GenDist)) + 
+  geom_point() +
+  theme_bw(base_size=20) +
+  xlab("Geographic Distance (kilometers)") + ylab("Genetic Distance (linearized D)") +
+  geom_smooth(method="lm", alpha=0.15, linetype="solid", color="#0072B2")
+distplot2
+```
 
 
 ```{r}
