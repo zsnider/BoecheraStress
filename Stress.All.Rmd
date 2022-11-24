@@ -195,6 +195,7 @@ ANOVA for diploids vs polyploids
 ```{r}
 nest_species <- aov(recovery.clim.ca.3$YII.mean ~ recovery.clim.ca.3$Species)
 summary(nest_species)
+TukeyHSD(nest_species)
 ```
 
 YII variance plot
