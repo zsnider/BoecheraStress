@@ -290,11 +290,10 @@ p3 <- ggplot(data=recovery.clim.ca, aes(x=tmin, y=YII)) +
 p4 <- ggplot(data=recovery.clim.ca, aes(x=Elevation, y=YII)) +
   geom_point() + theme_bw() +
   geom_smooth(method="loess", alpha=0.3, linetype="longdash", color="#0072B2")
-grid.arrange(p1, p2, p3, p4, ncol=2)
+#grid.arrange(p1, p2, p3, p4, ncol=2)
 p5 <- ggplot(data=recovery.clim.ca, aes(x=PPT, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Precipitation") +
   geom_smooth(method="loess", alpha=0.3, linetype="longdash", color="#0072B2")
-p5
 p6 <- ggplot(data=recovery.clim.ca, aes(x=tdmean, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Dew Point Temperature") +
   geom_smooth(method="loess", alpha=0.3, linetype="longdash", color="#0072B2")
@@ -310,8 +309,44 @@ p9 <- ggplot(data=recovery.clim.ca, aes(x=solclear, y=YII)) +
 p10 <- ggplot(data=recovery.clim.ca, aes(x=soltrans, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Cloud Transmittance") +
   geom_smooth(method="loess", alpha=0.3, linetype="longdash", color="#0072B2")
-grid.arrange(p5, p6, p7, p8, p9, p10, ncol=2)
-#grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
+#grid.arrange(p5, p6, p7, p8, p9, p10, ncol=2)
+grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
+```
+
+```{r}
+p1 <- ggplot(data=recovery.clim.ca, aes(x=tmean, y=YII)) +
+  geom_point() + theme_bw() + xlab("Mean Annual Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p2 <- ggplot(data=recovery.clim.ca, aes(x=tmax, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Max Annual Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p3 <- ggplot(data=recovery.clim.ca, aes(x=tmin, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Min Annual Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p4 <- ggplot(data=recovery.clim.ca, aes(x=Elevation, y=YII)) +
+  geom_point() + theme_bw() +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+#grid.arrange(p1, p2, p3, p4, ncol=2)
+p5 <- ggplot(data=recovery.clim.ca, aes(x=PPT, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Precipitation") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p6 <- ggplot(data=recovery.clim.ca, aes(x=tdmean, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Dew Point Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p7 <- ggplot(data=recovery.clim.ca, aes(x=vpdmax, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Max Annual Vapor Pressure Deficit") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p8 <- ggplot(data=recovery.clim.ca, aes(x=vpdmin, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Min Annual Vapor Pressure Deficit") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p9 <- ggplot(data=recovery.clim.ca, aes(x=solclear, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Solar Radiation") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p10 <- ggplot(data=recovery.clim.ca, aes(x=soltrans, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Cloud Transmittance") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+#grid.arrange(p5, p6, p7, p8, p9, p10, ncol=2)
+grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
 ```
 
 ### INITIAL CHLOROPHYLL FLUORESCENCE DATA ###
@@ -463,11 +498,12 @@ ion.clim.ca[12:21] <- scale(ion.clim.ca[12:21])
 
 Ion Leakage plot
 ```{r}
-ioncaplot <- ggplot(ion.clim.ca, aes(x=PopID, y=Percent.Leaked, color=Region)) +
+ioncaplot <- ggplot(ion.clim.ca, aes(x=Species, y=Percent.Leaked, fill=Species)) +
   geom_boxplot() +
-  theme_bw(base_size=20) +
-  xlab("Subpopulation") +
-  ylab("Percent of Ions Leaked After 4 Hours")
+  theme_bw(base_size=24) +
+  xlab("Boechera Species") +
+  ylab("Percent of Ions Leaked After 4 Hours") +
+  scale_fill_brewer(palette="Set2")
 ioncaplot
 ```
 
@@ -476,9 +512,9 @@ The model is Ion Leakage ~ Region + Pop(Region) + Individual(Pop(Region))
 Individual is a random effect. 
 ```{r}
 #Make the nested anova
-nest_i <- aov(ion.clim.ca$Percent.Leaked ~ factor(ion.clim.ca$Region) / factor(ion.clim.ca$PopID) / factor(ion.clim.ca$Individual))
+nest_i <- aov(ion.clim.ca$Percent.Leaked ~factor(ion.clim.ca$Region) / factor(ion.clim.ca$PopID))
 summary(nest_i)
-TukeyHSD(nest_i)
+TukeyHSD(nest_i)$'factor(ion.clim.ca$Region)'
 ```
 
 Diploid Species ANOVA
@@ -611,6 +647,7 @@ phenoplot2 <- ggplot(data=pheno.ca.2, aes(x=Time, y=PopID,fill=Score.pop.mean)) 
   scale_x_discrete(labels=c("Pre.Stress" = "Pre Stress", "Post.Stress" = "After Stress",
                             "Post.Recovery" = "After 5 Day Recovery"))
 phenoplot2
+ggplotly(phenoplot2)
 ```
 
 Adding a variance column and binding to climate data
