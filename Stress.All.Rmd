@@ -12,10 +12,6 @@ editor_options:
 
 Stress and Climate data for Southern California Boechera populations collected by Zach Snider. Variables include: Invididual, subpopulation (PopID), regional population (Region), Temperature of heat stress experiment (Heat.Temp), Cotyledon or True Leaf measurements (Cotyledon.vs.TL), Relative time, Date of heat stress, time of heat stress, type of stress measurement, count of measurement for that session, 1:F, 1:Fm, 1:Temp, YII,, 1:Fo,, 1:Fm, 1:Fv/Fm , Latitude, Longitude, Elevation, Date.Found, mean temperature, average max temp, average min temp, average precipitation, average max vapor pressure deficit, average min vapor pressure deficit, aspect, average solar transmittance on a clear day, and average solar transmittance on a cloudy day. 
 
-Elevation along with the 9 climate variables are potential explanatory variables, and could be appropriate for a multiple regression approach to predicting YII (quantum yield), but 10
-predictors is a lot. So it may be preferable to reduce the number of explanatory
-variables using PCA to come up with a few important explanatory components.
-
 Loading in the required packages
 ```{r setup, include=FALSE}
 library(vegan)
@@ -143,7 +139,7 @@ stress.clim.ca.2$Individual <- as.factor(stress.clim.ca.2$Individual)
 head(stress.clim.ca.3)
 ```
 
-Adding in climatic Clusters
+To add in climatic clusters, run this chunk
 ```{r}
 clusts <- read.csv("climate.clust2.csv")
 clusts$PopID <- as.factor(clusts$PopID)
@@ -158,13 +154,26 @@ stress.clim.ca.3 <- stress.clim.ca.3[!duplicated(stress.clim.ca.3$count), ]
 To scale the climate data, run this chunk
 ```{r}
 recovery.clim.ca.2[19:28] <- scale(recovery.clim.ca.2[19:28])
-stress.clim.ca.2[19:28] <-
+stress.clim.ca.2[19:28] <- scale(stress.clim.ca.2[19:28])
 ```
 
 
 ### 5 DAY RECOVERY CHLOROPHYLL FLUORESCENCE DATA ###
 
-Recovery YII averaged for each subpop
+Recovery YII averaged for each subpopulation. Graph.
+```{r}
+recoveryplot2 <- ggplot(data=recovery.clim.ca.2,aes(x=as.factor(PopID), y=as.numeric(YII), fill=as.factor(Region))) +
+  geom_boxplot() +
+  theme_bw(base_size=20) +
+  ylab("YII") +
+  xlab("Subpopulation") +
+  labs(title = "5 Day Recovery Measurements") +
+  labs(fill="Species") +
+  scale_fill_brewer(palette="Set2")
+recoveryplot2
+```
+
+Recovery YII averaged for each species. Graph.
 ```{r}
 recoveryplot2 <- ggplot(data=recovery.clim.ca.2,aes(x=as.factor(Species), y=as.numeric(YII), fill=as.factor(Species))) +
   geom_boxplot() +
@@ -198,18 +207,6 @@ summary(nest_species)
 TukeyHSD(nest_species)
 ```
 
-YII variance plot
-```{r}
-vplot <- ggplot(data=recovery.clim.ca.3, aes(x=as.factor(PopID), y=as.numeric(YII.mean),
-                                           fill=as.factor(Clim3))) +
-  geom_boxplot() +
-  theme_bw() +
-  xlab("Population") + ylab("YII Variance") + 
-  #ylim(0,0.16) + 
-  labs(title="5 Day Recovery", fill="Region")
-vplot
-```
-
 Linear Mixed Effects Model
 ```{r}
 recovery.clim.ca.2$Individual<- as.factor(recovery.clim.ca.2$Individual)
@@ -224,9 +221,8 @@ plot(m)
 #Individual explains 28 % of the variance left over after fixed effects are taken into account
 0.194/(0.118+0.114+.194) #=0.46
 #PopID explains 46% of the variance left over
-#citation("lme4")
+#To look at different climate groups
 m1 <- lmer(YII ~ Clim3 + (1|PopID) + (1|Individual), data=recovery.clim.ca.3)
-library(effects)
 plot(allEffects(m))
 plot(allEffects(m1))
 confint(m)
@@ -276,7 +272,44 @@ recovery.clim.ca.4 <- recovery.clim.ca.2[ , !apply(cor_matrix_rm,2,function(x) a
 vif(rmod)
 ```
 
-Plotting YII against climatic variables
+Plotting YII against individual climatic variables (Using LM best fit line)
+```{r}
+p1 <- ggplot(data=recovery.clim.ca, aes(x=tmean, y=YII)) +
+  geom_point() + theme_bw() + xlab("Mean Annual Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p2 <- ggplot(data=recovery.clim.ca, aes(x=tmax, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Max Annual Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p3 <- ggplot(data=recovery.clim.ca, aes(x=tmin, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Min Annual Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p4 <- ggplot(data=recovery.clim.ca, aes(x=Elevation, y=YII)) +
+  geom_point() + theme_bw() +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+#grid.arrange(p1, p2, p3, p4, ncol=2)
+p5 <- ggplot(data=recovery.clim.ca, aes(x=PPT, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Precipitation") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p6 <- ggplot(data=recovery.clim.ca, aes(x=tdmean, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Dew Point Temperature") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p7 <- ggplot(data=recovery.clim.ca, aes(x=vpdmax, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Max Annual Vapor Pressure Deficit") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p8 <- ggplot(data=recovery.clim.ca, aes(x=vpdmin, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Min Annual Vapor Pressure Deficit") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p9 <- ggplot(data=recovery.clim.ca, aes(x=solclear, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Solar Radiation") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+p10 <- ggplot(data=recovery.clim.ca, aes(x=soltrans, y=YII)) +
+  geom_point() + theme_bw() + xlab("Average Annual Cloud Transmittance") +
+  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
+#grid.arrange(p5, p6, p7, p8, p9, p10, ncol=2)
+grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
+```
+
+Plotting YII against climatic variables (Using Loess Best Fit)
 ```{r}
 p1 <- ggplot(data=recovery.clim.ca, aes(x=tmean, y=YII)) +
   geom_point() + theme_bw() + xlab("Mean Annual Temperature") +
@@ -313,51 +346,16 @@ p10 <- ggplot(data=recovery.clim.ca, aes(x=soltrans, y=YII)) +
 grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
 ```
 
-```{r}
-p1 <- ggplot(data=recovery.clim.ca, aes(x=tmean, y=YII)) +
-  geom_point() + theme_bw() + xlab("Mean Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p2 <- ggplot(data=recovery.clim.ca, aes(x=tmax, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Max Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p3 <- ggplot(data=recovery.clim.ca, aes(x=tmin, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Min Annual Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p4 <- ggplot(data=recovery.clim.ca, aes(x=Elevation, y=YII)) +
-  geom_point() + theme_bw() +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-#grid.arrange(p1, p2, p3, p4, ncol=2)
-p5 <- ggplot(data=recovery.clim.ca, aes(x=PPT, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Annual Precipitation") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p6 <- ggplot(data=recovery.clim.ca, aes(x=tdmean, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Annual Dew Point Temperature") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p7 <- ggplot(data=recovery.clim.ca, aes(x=vpdmax, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Max Annual Vapor Pressure Deficit") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p8 <- ggplot(data=recovery.clim.ca, aes(x=vpdmin, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Min Annual Vapor Pressure Deficit") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p9 <- ggplot(data=recovery.clim.ca, aes(x=solclear, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Annual Solar Radiation") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-p10 <- ggplot(data=recovery.clim.ca, aes(x=soltrans, y=YII)) +
-  geom_point() + theme_bw() + xlab("Average Annual Cloud Transmittance") +
-  geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
-#grid.arrange(p5, p6, p7, p8, p9, p10, ncol=2)
-grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
-```
 
 ### INITIAL CHLOROPHYLL FLUORESCENCE DATA ###
 
-Initial YII averaged for each subpop
+Initial YII averaged for each subpopopulation
 ```{r}
 stressplot2 <-  ggplot(data=stress.clim.ca.2, aes(x=as.factor(PopID), y=YII, fill=as.factor(Region))) +
   geom_boxplot() +
   theme_bw() +
   ylab("YII") +
-  xlab("Population") +
+  xlab("Subopulation") +
   labs(title = "Initial Stress Measurements") +
   labs(fill="Heat Stress (C°)") +
   scale_fill_brewer(palette="Set2")
@@ -368,13 +366,12 @@ Nested ANOVA to test the variance of YII.
 The model is YII ~ Region + Pop(Region) + Individual(Pop(Region))
 Individual is a random effect. 
 ```{r}
-#Make the nested anova
 nest_s <- aov(stress.clim.ca.3$YII.var ~ stress.clim.ca.3$Region / factor(stress.clim.ca.3$PopID) / factor(stress.clim.ca.3$Individual))
 summary(nest_s)
 TukeyHSD(nest_s)$'stress.clim.ca.3$Region'
 ```
 
-ANOVA for diploids vs polyploids
+ANOVA for species
 ```{r}
 nest_species <- aov(stress.clim.ca.3$YII.mean ~ stress.clim.ca.3$Species)
 summary(nest_species)
@@ -398,7 +395,6 @@ plot(m)
 #PopID explains 5.9% of the variance left over
 plot(allEffects(m))
 confint(m)
-
 ```
 Multiple Regression
 
@@ -456,7 +452,7 @@ p10 <- ggplot(data=stress.clim.ca.2, aes(x=soltrans, y=YII)) +
   geom_point() + theme_bw() + xlab("Average Annual Cloud Transmittance") +
   geom_smooth(method="lm", alpha=0.3, linetype="longdash", color="#0072B2")
 grid.arrange(p5, p6, p7, p8, p9, p10, ncol=3)
-grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
+#grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9,ncol=3)
 ```
 
 
@@ -496,7 +492,18 @@ ion.clim.ca <- ion.clim.ca[,-c(13,21)]
 ion.clim.ca[12:21] <- scale(ion.clim.ca[12:21])
 ```
 
-Ion Leakage plot
+Ion Leakage plot based on subpopulation
+```{r}
+ioncaplot <- ggplot(ion.clim.ca, aes(x=PopID, y=Percent.Leaked, fill=Region)) +
+  geom_boxplot() +
+  theme_bw(base_size=24) +
+  xlab("Subpopulation") +
+  ylab("Percent of Ions Leaked After 4 Hours") +
+  scale_fill_brewer(palette="Set2")
+ioncaplot
+```
+
+Ion Leakage plot based on species
 ```{r}
 ioncaplot <- ggplot(ion.clim.ca, aes(x=Species, y=Percent.Leaked, fill=Species)) +
   geom_boxplot() +
@@ -511,27 +518,18 @@ Nested ANOVA to test the variance of Ion Leakage.
 The model is Ion Leakage ~ Region + Pop(Region) + Individual(Pop(Region))
 Individual is a random effect. 
 ```{r}
-#Make the nested anova
 nest_i <- aov(ion.clim.ca$Percent.Leaked ~factor(ion.clim.ca$Region) / factor(ion.clim.ca$PopID))
 summary(nest_i)
 TukeyHSD(nest_i)$'factor(ion.clim.ca$Region)'
 ```
 
-Diploid Species ANOVA
+Species ANOVA
 ```{r}
 nest_species2 <- aov(ion.clim.ca$Percent.Leaked ~ ion.clim.ca$Species)
 summary(nest_species2)
 TukeyHSD(nest_species2)
 ```
-Diploid species graph
-```{r}
-ioncaplot <- ggplot(ion.clim.ca, aes(x=PopID, y=Percent.Leaked, color = Species)) +
-  geom_boxplot() +
-  theme_bw(base_size=20) +
-  xlab("Subpopulation") +
-  ylab("Percent of Ions Leaked After 4 Hours")
-ioncaplot
-```
+
 
 Linear Mixed Effects Model
 ```{r}
@@ -603,7 +601,9 @@ p10 <- ggplot(data=ion.clim.ca, aes(x=soltrans, y=Percent.Leaked)) +
 grid.arrange(p5, p6, p7, p8, p9, p10, ncol=3)
 ```
 
+
 ### PHENOTYPE DATA ###
+
 Loading the data
 ```{r}
 pheno <- read.csv("PhenotypeScores.csv")
@@ -634,6 +634,7 @@ pheno.ca.2$PopID <- as.factor(pheno.ca.2$PopID)
 colnames(pheno.ca.2) <- c('PopID','Time','Score.pop.mean')
 pheno.ca.2$Time <- factor(pheno.ca.2$Time, levels=c('Initial', 'poststress', 'postrecovery'))
 ```
+
 Plotting averages
 ```{r}
 phenoplot2 <- ggplot(data=pheno.ca.2, aes(x=Time, y=PopID,fill=Score.pop.mean)) +
@@ -677,7 +678,7 @@ pheno.clim.ca <- left_join(pheno.ca.4, climate, by=c("Individual","Region","PopI
 colnames(pheno.clim.ca) <- c('Individual','Time','Score.var','PopID','Region','Species','Score.mean','Latitude','Longitude','Elevation','Date.Found','tmean','tmax','tmin','PPT','tdmean','vpdmax','vpdmin','aspect','solclear','soltrans') #Renaming columns for legibility
 ```
 
-to filter for only post recovery, run this chunk
+To filter for only post recovery, run this chunk
 ```{r}
 pheno.clim.ca <- pheno.clim.ca %>%
   filter(Time == "postrecovery")
@@ -693,13 +694,12 @@ Nested ANOVA to test the variance of Phenotype Score.
 The model is Score ~ Region + Pop(Region) + Individual(Pop(Region))
 Individual is a random effect. 
 ```{r}
-#Make the nested anova
 nest_p <- aov(pheno.clim.ca$Score.mean ~ pheno.clim.ca$Region / factor(pheno.clim.ca$PopID) / factor(pheno.clim.ca$Individual))
 summary(nest_p)
 TukeyHSD(nest_p)$'pheno.clim.ca$Region'
 ```
 
-ANOVA for diploids
+ANOVA by species
 ```{r}
 nest_p2 <- aov(pheno.clim.ca$Score.mean ~ pheno.clim.ca$Species)
 summary(nest_p2)
@@ -792,6 +792,7 @@ dat2 = data.frame(scale(dat2))
 head(dat2)
 ```
 
+Testing it out, one variable at a time
 ```{r}
 elev=dist(dat2[1], method ="euclidean")
 tmean=dist(dat2[2], method ="euclidean")
@@ -809,7 +810,6 @@ Creating distance matrix using different methods
 ```{r}
 #dat2 <- dat2[,-c(1)]
 euclid=dist(dat2, method ="euclidean")
-max.print(euclid)
 euclid_sq=euclid^2
 euclid_sqrt=sqrt(euclid)
 library(ecodist)
@@ -817,13 +817,13 @@ braycurtis=distance(dat2, "bray-curtis")
 mahal_sq=distance(dat2, "mahal")
 hist(mahal_sq)
 mahal=sqrt(mahal_sq)
-#mahal # check how a distance matrix looks like
+#mahal # check how the distance matrix looks like
 ```
 
 Convert to a dataframe to write it to a csv file if needed
 ```{r}
 df.e <- as.data.frame(as.matrix(euclid))
-write.csv(df.e, file="clim.euclid.csv")
+#write.csv(df.e, file="clim.euclid.csv")
 ```
 
 Finding optimal K
@@ -863,7 +863,7 @@ names(bruv) = gsub(pattern = "X", replacement = "", x = names(bruv))
 bruv2 <- as.dist(bruv)
 ```
 
-Loading in Pop Distance Matrix (meters)
+Loading in Population Distance Matrix (meters)
 ```{r}
 km <- read.table("bca_coords_km_mat.txt")
 head(km)
@@ -871,10 +871,13 @@ names(km) = gsub(pattern = "X", replacement = "", x = names(km))
 km2 <- as.dist(km)
 ```
 
-Graphing genetic, climatic, and physical distances
+Creating a distance matrix dataframe
 ```{r}
 dist.df <- data.frame( Bruvo=bruv2[lower.tri(bruv2)], ClimDist=euclid[ lower.tri(euclid)], GeogDist = km2[lower.tri(km2)])
 summary(dist.df)
+```
+Graphing genetic, climatic, and physical distances
+```{r}
 distplot1 <- ggplot(dist.df,aes(x=ClimDist,y=Bruvo)) + 
   geom_point() +
   theme_bw(base_size=20) +
@@ -914,25 +917,21 @@ BIC(a);BIC(a2);BIC(a3);BIC(a4)
 Dsquared(a, adjust=T);Dsquared(a2, adjust=T);Dsquared(a4, adjust=T)
 ```
 
-Linear models
+Using linear models instead
 ```{r}
 a <- lm(Bruvo ~ ClimDist, data=dist.df)
-summary(a)
 a2 <-lm(Bruvo ~ GeogDist, data=dist.df)
-summary(a2)
 a3 <-lm(ClimDist ~ GeogDist, data=dist.df)
-summary(a3)
 a4 <- lm(Bruvo ~ ClimDist + GeogDist, data=dist.df)
-summary(a4)
 AIC(a);AIC(a2);AIC(a3);AIC(a4)
 BIC(a);BIC(a2);BIC(a3);BIC(a4)
-#Dsquared(a, adjust=T);Dsquared(a2, adjust=T);Dsquared(a4, adjust=T)
 cand.mods <- list("Climate" = a, "Geography" = a2)
 selectionTable <- aictab(cand.set = cand.mods)
 selectionTable
 confset(cand.set = cand.mods)
 ```
 
+Making multiple regressions using distance matrices based on climate and physical distance to predict genetic distance. Climate varaibles are also tried individually. 
 ```{r}
 MRM(bruv2 ~  euclid + km2, nperm=1000, method="linear", mrank=F)
 MRM(bruv2 ~  euclid, nperm=1000, method="linear", mrank=F)
@@ -943,29 +942,20 @@ MRM(bruv2 ~ km2 + elev + tmean + tmax + tmin + ppt + tdmean + vpdmax + vpdmin + 
 
 
 
+##Creating a distance matrix to reflect stress response across subppulations ##
 
-
-
-
-
-
-
-Creating a YII distance matrix, based on recovery YII
+Creating a YII distance matrix, based on recovery YII. 
 ```{r}
 Y2 <- data.frame(recovery.clim.ca.2$Individual, recovery.clim.ca.2$PopID, recovery.clim.ca.2$YII, recovery.clim.ca.2$YII.mean, recovery.clim.ca.2$YII.var)
 names(Y2) <- c("Individual", "PopID","YII","YII.mean","YII.var")
 Y2$Individual <- as.factor(Y2$Individual)
-#Y2a <- left_join(clusts, Y2, by=c("Individual","PopID"))
 Y2b <- aggregate(YII ~ PopID, 
                     data=Y2, 
                     function(x) { 
-                      c(avg=var(x)) 
+                      c(avg=var(x))  #Set to 'var' or 'mean', depending which you want
                     })
 Y2b
 Y2d.stress <- dist(Y2b, method="euclidean")
-#Y2d <- data.frame(as.matrix(Y2d.stress))
-#write.csv(Y2d, "YII.pop.distance.csv")
-#shapiro.test(Y2d.stress)
 #hist(Y2d.stress)
 #hist(sqrt(Y2d.stress))
 ```
@@ -986,7 +976,7 @@ Y2d.stress <- dist(Y2b, method="euclidean")
 #hist(Y2d.stress)
 ```
 
-Based on ion leakage
+Distance matrix based on ion leakage
 ```{r}
 Ion <- data.frame(ion.clim.ca$Individual, ion.clim.ca$PopID, ion.clim.ca$Percent.Leaked)
 names(Ion) <- c("Individual", "PopID","Ions")
@@ -1000,6 +990,7 @@ Ion2 <- Ion2[-3,]
 Ion.dist <- dist(Ion2, method="euclidean")
 ```
 
+Distance matrix based on chlorosis score
 ```{r}
 chlorosis <- data.frame(pheno.clim.ca$Individual, pheno.clim.ca$PopID, pheno.clim.ca$Score.mean, pheno.clim.ca$Score.var)
 names(chlorosis) <- c("Individual", "PopID","Score.mean","Score.var")
@@ -1013,8 +1004,7 @@ chlorosis2 <- chlorosis2[-3,]
 chlorosis.dist <- dist(chlorosis2, method="euclidean")
 ```
 
-
-
+##Creating Genetic distance matrix based on different metrics. Choose one chunk to run. ##
 
 Creating a gentetic matrix of the same size based on Nei's G
 ```{r}
@@ -1068,6 +1058,7 @@ ngpop <- ngpop[-3,]
 gendist <- as.dist(ngpop)
 ```
 
+##
 Creating a physical distance matrix the same size
 ```{r}
 km.subset <- read.table("bpop_km_subset.txt")
@@ -1079,6 +1070,7 @@ km.subset <- km.subset[-3,]
 km.subset.d <- as.dist(km.subset)
 ```
 
+##
 Creating a climate matrix the same size
 ```{r}
 dat2 <- dat1[,-c(1)]
@@ -1099,12 +1091,12 @@ Creating a mahal distance climate matrix
 ```{r}
 mahal_sq=distance(dat3, "mahalanobis")
 mahal=sqrt(mahal_sq)
-dat4 = decostand(dat3, method="standardize")
-head(dat4)
-climdist = dist(dat4, method="euclidean")
-?dist
+#dat4 = decostand(dat3, method="standardize") 
+#head(dat4)
+#climdist = dist(dat4, method="euclidean")
 ```
 
+Checking histograms
 ```{r}
 hist(mahal_sq)
 hist(gendist)
@@ -1113,7 +1105,7 @@ hist(Y2d.stress)
 hist(km.subset.d)
 ```
 
-Sqrt transforming everything
+Sqrt transforming everything (unneccesary, just checking)
 ```{r}
 gendist <- sqrt(gendist)
 climdist <- sqrt(climdist)
@@ -1121,7 +1113,7 @@ km.subset.d <- sqrt(km.subset.d)
 Y2d.stress <- sqrt(Y2d.stress)
 ```
 
-log transforming everything
+log transforming everything (unneccesary, just checking)
 ```{r}
 gendis <- log(gendist)
 climdist <- log(climdist)
@@ -1129,18 +1121,16 @@ km.subset.d <- log(km.subset.d)
 Y2d.stress <-  log(Y2d.stress)
 ```
 
+Checking the matrices
 ```{r}
 head(gendist)
 head(climdist)
 head(km.subset.d)
-head(Y2d.stress)
+head(Y2d.stress) #scale if necessary
 ```
 
-```{r}
-Y2d.stress <- scale(Y2d.stress)
-```
 
-Multiple regression on distance matrices
+Multiple regression on distance matrices. Trying many combinations
 ```{r}
 library(ecodist)
 MRM(Y2d.stress ~ gendist + mahal_sq + km.subset.d, nperm=1000, method="linear", mrank=F)
@@ -1151,7 +1141,6 @@ MRM(Y2d.stress ~ km.subset.d, nperm=1000, method="linear", mrank=F)
 MRM(Y2d.stress ~ mahal_sq, nperm=1000, method="linear", mrank=F)
 MRM(gendist ~ km.subset.d + climdist, nperm=1000, method="linear",mrank=F)
 
-AIC(MRM1)
 MRM(Ion.dist ~ gendist + mahal_sq + km.subset.d, nperm=1000, method="linear", mrank=F)
 MRM(Ion.dist ~ gendist + climdist + km.subset.d, nperm=1000, method="linear", mrank=F)
 MRM(Ion.dist ~ km.subset.d + climdist, nperm=1000, method="linear", mrank=FALSE)
@@ -1159,10 +1148,6 @@ MRM(Ion.dist ~ km.subset.d, nperm=1000, method="linear", mrank=F)
 MRM(Ion.dist ~ climdist, nperm=1000, method="linear", mrank=FALSE)
 MRM(chlorosis.dist ~ gendist + climdist + km.subset.d, nperm=1000, method="linear", mrank=F)
 MRM(chlorosis.dist ~ climdist + km.subset.d, nperm=1000, method="linear", mrank=F)
-```
-
-```{r}
-vif(dat3)
 ```
 
 distance matrix for each climate variable based on euclidean distances
@@ -1180,6 +1165,7 @@ vpdmin=dist(dat3[8], method ="euclidean")
 solrad=dist(dat3[9], method ="euclidean")
 cloudtrans=dist(dat3[10], method ="euclidean")
 ```
+
 each climate matrix based on mahal
 ```{r}
 elev=distance(dat3[1], method ="mahal")
@@ -1194,6 +1180,7 @@ solrad=distance(dat3[9], method ="mahal")
 cloudtrans=distance(dat3[10], method ="mahal")
 ```
 
+More MRM combinations
 ```{r}
 MRM(Y2d.stress ~ gendist + km.subset.d + elev + tmean + tmax + tmin + ppt + vpdmax + vpdmin + solrad + cloudtrans, nperm=1000, method="linear", mrank=F)
 MRM(Y2d.stress ~ gendist, nperm=1000, method="linear", mrank=F)
@@ -1213,7 +1200,7 @@ MRM(Ion.dist ~ gendist + km.subset.d + elev + tmean + tmax + tmin + ppt + tdmean
 MRM(Y2d.stress ~ gendist + km.subset.d + elev + tmean, nperm=1000, method="linear", mrank=F)
 ```
 
-
+More MRM combinations, based on individual climate factor
 ```{r}
 head(dat3)
 temp=dist(dat3[,c(2,3,4,6)], method ="euclidean")
@@ -1227,217 +1214,6 @@ MRM(Y2d.stress ~ gendist + km.subset.d + elev + temp + ppt + vpd + solrad + clou
 
 
 
-
-
-
-```{r}
-dist.df <- data.frame( GenDist=gendist[lower.tri(gendist)], ClimDist=climdist[lower.tri(climdist)], GeogDist = km.subset.d[lower.tri(km.subset.d)])
-summary(dist.df)
-distplot1 <- ggplot(dist.df,aes(x=ClimDist,y=GenDist)) + 
-  geom_point() +
-  theme_bw(base_size=20) +
-  xlab("Climate Distance") + ylab("Genetic Distance (linearized D)") +
-  geom_smooth(method="lm", alpha=0.15, linetype="solid", color="#0072B2")
-distplot1
-distplot2 <- ggplot(dist.df,aes(x=GeogDist,y=GenDist)) + 
-  geom_point() +
-  theme_bw(base_size=20) +
-  xlab("Geographic Distance (kilometers)") + ylab("Genetic Distance (linearized D)") +
-  geom_smooth(method="lm", alpha=0.15, linetype="solid", color="#0072B2")
-distplot2
-```
-
-
-```{r}
-dist.df <- data.frame( GenDist=gendist[lower.tri(gendist)], ClimDist=climdist[ lower.tri(climdist)], GeogDist = km.subset.d[lower.tri(km.subset.d)], Stress = Y2d.stress[lower.tri(Y2d.stress)])
-mrm1 <- lm(Stress~GenDist + ClimDist + GeogDist, data=dist.df)
-#mrm1 <- lm(dist(Stress)~dist(GenDist) + dist(ClimDist) + dist(GeogDist), data=dist.df)
-AICc(mrm1)
-dist.df3 <- data.frame( GenDist=gendist[lower.tri(gendist)], ClimDist=climdist[ lower.tri(climdist)], GeogDist = km.subset.d[lower.tri(km.subset.d)], Stress = Y2d.stress[lower.tri(Y2d.stress)], elev=elev[lower.tri(elev)], tmean=tmean[lower.tri(tmean)], tmax=tmax[lower.tri(tmax)],tmin=tmin[lower.tri(tmin)],ppt=ppt[lower.tri(ppt)],tdmean=tdmean[lower.tri(tdmean)],vpdmax=vpdmax[lower.tri(vpdmax)],vpdmin=vpdmin[lower.tri(vpdmin)],solrad=solrad[lower.tri(solrad)],cloudtrans=cloudtrans[lower.tri(cloudtrans)])
-mrm2 <- lm(Stress ~ GenDist + GeogDist + elev + tmean + tmax + tmin + ppt + tdmean + vpdmax + vpdmin + solrad + cloudtrans, data = dist.df3)
-AICc(mrm2)
-```
-
-
-
-
-
-
-
-
-
-
-Creating the distance matrix dataframe with YII
-```{r}
-dist.df2 <- data.frame( GenDist=ngpop2[lower.tri(ngpop2)], ClimDist=euclid.clim.subset[ lower.tri(euclid.clim.subset)], GeogDist = km.subset.d[lower.tri(km.subset.d)], Stress = Y2d.stress[lower.tri(Y2d.stress)])
-```
-Creating the distance matrix dataframe with Ion Leakage
-```{r}
-dist.df2 <- data.frame( GenDist=ngpop2[lower.tri(ngpop2)], ClimDist=euclid.clim.subset[ lower.tri(euclid.clim.subset)], GeogDist = km.subset.d[lower.tri(km.subset.d)], Stress = Ion.dist[lower.tri(Ion.dist)])
-```
-
-
-```{r}
-M1a <-glm(Stress ~ ClimDist, data=dist.df2)
-M1b <-glm(Stress ~ GeogDist, data=dist.df2)
-M1c <-glm(Stress ~ GenDist, data=dist.df2)
-cand.mods <- list("Climate" = M1a, "Geography" = M1b, "Genetic" = M1c)
-selectionTable <- aictab(cand.set = cand.mods)
-selectionTable
-#confset(cand.set = cand.mods)
-Dsquared(M1a);Dsquared(M1b);Dsquared(M1c)
-```
-Root mean squared error
-```{r}
-RSME.M1a <- sqrt(mean(M1a$residuals^2))
-RSME.M1a
-RSME.M1b <- sqrt(mean(M1b$residuals^2))
-RSME.M1b
-RSME.M1c <- sqrt(mean(M1c$residuals^2))
-RSME.M1c
-```
-
-```{r}
-M2a <-glm(Stress ~ GenDist + ClimDist, data=dist.df2)
-M2b <-glm(Stress ~ GenDist + GeogDist, data=dist.df2)
-M2c <-glm(Stress ~ ClimDist + GeogDist, data=dist.df2)
-M3 <- glm(Stress ~ ClimDist + GeogDist + GenDist, data=dist.df2)
-Dsquared(M1a);Dsquared(M1b);Dsquared(M1c)
-Dsquared(M2a);Dsquared(M2b);Dsquared(M2c)
-Dsquared(M3)
-#AIC(M1a);AIC(M1b);AIC(M1c)
-#AIC(M2a);AIC(M2b);AIC(M2c);AIC(M3)
-```
-
-
-
-
-
-
-```{r}
-M1a <- lm(Stress ~ ClimDist, data=dist.df2)
-M1b <-lm(Stress ~ GeogDist, data=dist.df2)
-M1c <-lm(Stress ~ GenDist, data=dist.df2)
-summary(M1a);summary(M1b);summary(M1c)
-summary(M1a)$adj.r.squared
-AIC(M1a);AIC(M1b);AIC(M1c)
-BIC(M1a);BIC(M1b);BIC(M1c)
-cand.mods <- list("Climate" = M1a, "Geography" = M1b, "Genetic" = M1c)
-selectionTable <- aictab(cand.set = cand.mods)
-selectionTable
-confset(cand.set = cand.mods)
-```
-
-
-```{r}
-dplot1 <- ggplot(dist.df2, aes(x=ClimDist, y=Stress)) +
-  geom_point() +
-  theme_bw(base_size=10) +
-  xlab("Climate") + ylab("Stress") +
-  geom_smooth(method="lm", alpha=0.15, linetype="solid", color="#0072B2")
-dplot1
-dplot2 <- ggplot(dist.df2, aes(x=GeogDist, y=Stress)) +
-  geom_point() +
-  theme_bw(base_size=10) +
-  xlab("Climate") + ylab("Stress") +
-  geom_smooth(method="lm", alpha=0.15, linetype="solid", color="#0072B2")
-dplot2
-dplot3 <- ggplot(dist.df2, aes(x=GenDist, y=Stress)) +
-  geom_point() +
-  theme_bw(base_size=10) +
-  xlab("Genetic Distance") + ylab("Stress") +
-  geom_smooth(method="lm", alpha=0.15, linetype="solid", color="#0072B2")
-dplot3
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-AICc scores for clusters
-```{r}
-adegenetTutorial("snapclust")
-library(adegenet)
-data(dapcIllus)
-sapply(dapcIllus, nPop)
-dapcIllus
-a.clust <- snapclust(dapcIllus$a, k = 6)
-class(a.clust)
-names(a.clust)
-head(a.clust$group, 12)
-length(a.clust$group)
-dim(a.clust$proba)
-head(a.clust$proba)
-a.tab <- table(pop(dapcIllus$a), a.clust$group)
-a.tab
-class(a.tab)
-```
-
-```{r}
-cal <- read.genalex("msat_genalex_californica.csv", ploidy=4, geo=FALSE)
-cal2 <- genclone2genind(cal)
-cal2
-class(cal2)
-sapply(cal2, nPop)
-AICc(a.clust, 3, pop.ini = "ward",
-  max.iter = 100,
-  n.start = 10,
-  n.start.kmeans = 50,
-  hybrids = FALSE,
-  dim.ini = 100,
-  hybrid.coef = NULL,
-)
-```
-
-```{r}
-obj1 <- read.structure("Msat_ca_triploid_missingalleles", n.ind=55, n.loc=13, row.marknames=1)
-
-```
-
-```{r}
-gendf1<- read.csv("msatdf_trip_missingmarkers.csv")
-rownames(gendf1) <- gendf1[,1]; gendf1 <- gendf1[,-c(1)]
-gendf2 <- t(gendf1)
-obj1 <- df2genind(gendf1, sep=",", ncode=3, NA.char=0, ploidy=2, type='codom')
-obj1
-sapply(obj1, pop)
-```
-
-```{r}
-a.clust <- snapclust(obj1, k = 2)
-
-a.tab <- read.csv("Structuregroups.csv")
-head(a.tab)
-a.tab <- a.tab[-1,]
-a.tab <- as.table(a.tab)
-```
-
-```{r}
-find.clusters.genind(obj1)
-```
-
-
-```{r}
-a.clust
-AICc(a.clust, 2, pop.ini = "ward",
-  max.iter = 100,
-  n.start = 10,
-  n.start.kmeans = 50,
-  hybrids = FALSE,
-  dim.ini = 100,
-  hybrid.coef = NULL,
-)
-
-```
 
 
 
