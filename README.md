@@ -1,5 +1,5 @@
 # BoecheraStress
-Master's Thesis regarding Boechera californica stress tolerance analyses
+Master's Thesis regarding Boechera californica stress tolerance and genetic diversity
 
 
 Stress.All.Rmd is the R file that contains most (if not all) of the analyses. 
